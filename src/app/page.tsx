@@ -1,3 +1,5 @@
+'use client';
+
 import { SignalCard } from '@/components/SignalCard';
 import { IndicatorCard } from '@/components/IndicatorCard';
 import { getSignal } from '@/lib/signal';
