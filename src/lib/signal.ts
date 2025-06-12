@@ -57,20 +57,39 @@ export type Signal = 'BUY' | 'SELL' | 'HOLD';
 export function getSignal(candles: Candle[]): SignalResult {
   if (!candles.length) return { signal: 'HOLD', reason: 'No data available' };
 
+  const lastCandle = candles[candles.length - 1];
+  const lastPrice = lastCandle.close;
+  const now = Date.now();
+
+  if (activeTrade) {
+    const { side, stopLoss, takeProfit } = activeTrade;
+    const stopHit =
+      (side === 'BUY' && lastPrice <= stopLoss) ||
+      (side === 'SELL' && lastPrice >= stopLoss);
+    const tpHit =
+      (side === 'BUY' && lastPrice >= takeProfit) ||
+      (side === 'SELL' && lastPrice <= takeProfit);
+
+    if (stopHit || tpHit) {
+      if (side === 'BUY') lastBuyTime = now; else lastSellTime = now;
+      activeTrade = null;
+      return {
+        signal: 'HOLD',
+        reason: stopHit ? 'Stop loss hit' : 'Take profit hit',
+      };
+    }
+  }
+
   const rsi = rsi14(candles);
   const fast = emaFast(candles);
   const slow = emaSlow(candles);
   const bb = bollingerBands(candles);
-  const lastCandle = candles[candles.length - 1];
-  const lastPrice = lastCandle.close;
   const volSma = volumeSMA(candles, 20);
 
   // Volume confirmation
   if (lastCandle.volume < volSma * config.volumeMultiplier) {
     return { signal: 'HOLD', reason: 'Low volume' };
   }
-
-  const now = Date.now();
 
   // Breakeven stop adjustment
   if (activeTrade && now - activeTrade.entryTime >= 6 * 5 * 60 * 1000 && activeTrade.stopLoss !== activeTrade.entryPrice) {

@@ -126,4 +126,38 @@ describe('signal', () => {
     const candles = genCandles(prices, 10); // low volume
     expect(getSignal(candles).signal).toBe('HOLD');
   });
+
+  it('closes trade on take profit and updates cooldown', () => {
+    mockTime += 1_000_000;
+    const getSignal = loadSignal();
+    const pricesOpen = [...Array(20).fill(100), 90];
+    const volumes = [...Array(20).fill(300), 500];
+    const candlesOpen = genCandles(pricesOpen, volumes);
+    expect(getSignal(candlesOpen).signal).toBe('BUY');
+
+    const pricesTp = [...Array(20).fill(100), 92];
+    const candlesTp = genCandles(pricesTp, volumes);
+    const res = getSignal(candlesTp);
+    expect(res.reason).toBe('Take profit hit');
+    expect(res.signal).toBe('HOLD');
+
+    expect(getSignal(candlesOpen).signal).toBe('HOLD');
+  });
+
+  it('closes trade on stop loss and updates cooldown', () => {
+    mockTime += 1_000_000;
+    const getSignal = loadSignal({ ...originalConfig, rsiBuy: 0, rsiSell: 100 });
+    const pricesOpen = [...Array(50).fill(100), 90];
+    const volumes = [...Array(50).fill(300), 500];
+    const candlesOpen = genCandles(pricesOpen, volumes);
+    expect(getSignal(candlesOpen).signal).toBe('SELL');
+
+    const pricesSl = [...Array(50).fill(100), 91];
+    const candlesSl = genCandles(pricesSl, volumes);
+    const res = getSignal(candlesSl);
+    expect(res.reason).toBe('Stop loss hit');
+    expect(res.signal).toBe('HOLD');
+
+    expect(getSignal(candlesOpen).signal).toBe('HOLD');
+  });
 });
