@@ -1,5 +1,12 @@
 import type { Candle } from './types';
 
+export function volumeSMA(candles: Candle[], period: number): number {
+  if (candles.length < period) return 0;
+  const slice = candles.slice(-period);
+  const sum = slice.reduce((acc, c) => acc + c.volume, 0);
+  return sum / period;
+}
+
 export function rsi14(candles: Candle[]): number {
   if (candles.length < 15) return NaN;
   let gains = 0;

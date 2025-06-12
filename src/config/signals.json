@@ -1,0 +1,8 @@
+{
+  "rsiBuy": 30,
+  "rsiSell": 70,
+  "volumeMultiplier": 1.5,
+  "signalCooldownMin": 10,
+  "emaPeriodFast": 12,
+  "emaPeriodSlow": 26
+}
