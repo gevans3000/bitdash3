@@ -1,6 +1,6 @@
 import { DataCard } from './DataCard';
 import { Candle } from '@/lib/types';
-import { rsi14, ema, vwap } from '@/lib/indicators';
+import { rsi14, ema, vwap, bollingerBands } from '@/lib/indicators';
 
 const ema12 = ema(12);
 const ema26 = ema(26);
@@ -11,11 +11,21 @@ export function IndicatorCard({ candles }: { candles: Candle[] }) {
   const e26 = ema26(candles).toFixed(2);
   const vw = vwap(candles).toFixed(2);
   const last = candles[candles.length - 1]?.close.toFixed(2);
+  
+  // Get Bollinger Bands values
+  const bb = bollingerBands(candles);
+  const bbUpper = bb.upper.toFixed(2);
+  const bbMiddle = bb.middle.toFixed(2);
+  const bbLower = bb.lower.toFixed(2);
+  
   const rows = [
     ['RSI', rsi],
     ['EMA12', e12],
     ['EMA26', e26],
     ['VWAP', vw],
+    ['BB Upper', bbUpper],
+    ['BB Mid', bbMiddle],
+    ['BB Lower', bbLower],
     ['Last', last],
   ];
   return (
