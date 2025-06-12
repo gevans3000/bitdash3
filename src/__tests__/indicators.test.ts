@@ -33,6 +33,11 @@ describe('indicators', () => {
   it('calculates rsi correctly', () => {
     expect(rsi14(candles)).toBeCloseTo(100, 0); // All prices rising = RSI 100
   });
+
+  it('returns NaN for short datasets', () => {
+    const shortCandles = genCandles(Array.from({ length: 10 }, (_, i) => i + 1));
+    expect(rsi14(shortCandles)).toBeNaN();
+  });
   
   it('calculates vwap correctly', () => {
     expect(vwap(candles)).toBeCloseTo(15.5, 1);
