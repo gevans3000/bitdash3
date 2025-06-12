@@ -20,7 +20,7 @@ describe('getBinanceCandles', () => {
   });
 
   afterEach(() => {
-    // @ts-ignore
+    // @ts-expect-error - jest adds fetch during tests
     delete global.fetch;
   });
 
