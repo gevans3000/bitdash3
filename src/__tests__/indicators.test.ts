@@ -90,14 +90,33 @@ describe('signal', () => {
     expect(getSignal(candles).signal).toBe('SELL');
   });
 
-  it('respects cooldown period', () => {
-    const getSignal = loadSignal({ ...originalConfig, rsiBuy: 0, rsiSell: 100 });
-    const prices = [...Array(50).fill(100), 110];
-    const candles = genCandles(prices, 300);
-    // Trigger first trade
-    getSignal(candles);
-    // Not enough time elapsed
+  it('respects cooldown per side', () => {
+    const getSignal = loadSignal();
+    const prices = [...Array(20).fill(100), 90];
+    const volumes = [...Array(20).fill(300), 500];
+    const candles = genCandles(prices, volumes);
+    // Trigger BUY via oversold condition
+    expect(getSignal(candles).signal).toBe('BUY');
+    // Immediate BUY again blocked
     expect(getSignal(candles).signal).toBe('HOLD');
+    // SELL should be allowed despite BUY cooldown
+    const pricesDown = [...Array(50).fill(100), 90];
+    const volumesDown = [...Array(50).fill(300), 500];
+    const candlesDown = genCandles(pricesDown, volumesDown);
+    expect(getSignal(candlesDown).signal).toBe('SELL');
+  });
+
+  it('moves stop to breakeven after 6 candles', () => {
+    const getSignal = loadSignal();
+    const prices = [...Array(20).fill(100), 90];
+    const volumes = [...Array(20).fill(300), 500];
+    const candles = genCandles(prices, volumes);
+    const entry = getSignal(candles);
+    expect(entry.signal).toBe('BUY');
+    mockTime += 6 * 5 * 60 * 1000;
+    const res = getSignal(candles);
+    expect(res.reason).toBe('Stop moved to breakeven');
+    expect(res.stopLoss).toBeCloseTo(prices[prices.length - 1], 5);
   });
 
   it('respects volume threshold', () => {

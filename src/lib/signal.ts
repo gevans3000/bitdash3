@@ -5,8 +5,32 @@ import config from '../config/signals.json';
 const emaFast = ema(config.emaPeriodFast);
 const emaSlow = ema(config.emaPeriodSlow);
 
-// Store last signal time for cooldown
-let lastSignalTime = 0;
+// Store last signal times for cooldown per trade side
+let lastBuyTime = 0;
+let lastSellTime = 0;
+
+interface ActiveTrade {
+  side: 'BUY' | 'SELL';
+  entryTime: number;
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+}
+
+// Track the currently open trade (if any)
+let activeTrade: ActiveTrade | null = null;
+
+function isCooldown(side: 'BUY' | 'SELL', now: number) {
+  const last = side === 'BUY' ? lastBuyTime : lastSellTime;
+  return now - last < config.signalCooldownMin * 60 * 1000;
+}
+
+function openTrade(side: 'BUY' | 'SELL', price: number, now: number, reason: string): SignalResult {
+  const params = riskParams(price, side);
+  if (side === 'BUY') lastBuyTime = now; else lastSellTime = now;
+  activeTrade = { side, entryTime: now, entryPrice: price, ...params };
+  return { signal: side, reason, ...params };
+}
 
 function riskParams(entry: number, side: 'BUY' | 'SELL') {
   if (side === 'BUY') {
@@ -46,21 +70,28 @@ export function getSignal(candles: Candle[]): SignalResult {
     return { signal: 'HOLD', reason: 'Low volume' };
   }
 
-  // Cooldown enforcement
   const now = Date.now();
-  if (now - lastSignalTime < config.signalCooldownMin * 60 * 1000) {
-    return { signal: 'HOLD', reason: 'Signal cooldown active' };
+
+  // Breakeven stop adjustment
+  if (activeTrade && now - activeTrade.entryTime >= 6 * 5 * 60 * 1000 && activeTrade.stopLoss !== activeTrade.entryPrice) {
+    activeTrade.stopLoss = activeTrade.entryPrice;
+    return {
+      signal: 'HOLD',
+      reason: 'Stop moved to breakeven',
+      stopLoss: activeTrade.stopLoss,
+      takeProfit: activeTrade.takeProfit,
+    };
   }
+
+  // Cooldown checks will run per trade side
 
   // Bollinger/RSI extremes override
-  if (rsi > config.rsiSell && lastPrice > bb.upper) {
-    lastSignalTime = now;
-    return { signal: 'SELL', reason: 'RSI overbought & above band', ...riskParams(lastPrice, 'SELL') };
+  if (rsi > config.rsiSell && lastPrice > bb.upper && !isCooldown('SELL', now)) {
+    return openTrade('SELL', lastPrice, now, 'RSI overbought & above band');
   }
 
-  if (rsi < config.rsiBuy && lastPrice < bb.lower) {
-    lastSignalTime = now;
-    return { signal: 'BUY', reason: 'RSI oversold & below band', ...riskParams(lastPrice, 'BUY') };
+  if (rsi < config.rsiBuy && lastPrice < bb.lower && !isCooldown('BUY', now)) {
+    return openTrade('BUY', lastPrice, now, 'RSI oversold & below band');
   }
 
   // EMA crossover logic
@@ -70,13 +101,11 @@ export function getSignal(candles: Candle[]): SignalResult {
     const crossUp = prevFast <= prevSlow && fast > slow;
     const crossDown = prevFast >= prevSlow && fast < slow;
 
-    if (crossUp) {
-      lastSignalTime = now;
-      return { signal: 'BUY', reason: 'EMA cross up', ...riskParams(lastPrice, 'BUY') };
+    if (crossUp && !isCooldown('BUY', now)) {
+      return openTrade('BUY', lastPrice, now, 'EMA cross up');
     }
-    if (crossDown) {
-      lastSignalTime = now;
-      return { signal: 'SELL', reason: 'EMA cross down', ...riskParams(lastPrice, 'SELL') };
+    if (crossDown && !isCooldown('SELL', now)) {
+      return openTrade('SELL', lastPrice, now, 'EMA cross down');
     }
   }
 
