@@ -7,10 +7,14 @@ export async function GET() {
   try {
     const candles = await getBinanceCandles();
     return NextResponse.json(candles);
-  } catch {
-    return NextResponse.json(
-      { error: 'upstream_unavailable' },
-      { status: 502 }
-    );
+  } catch (err) {
+    console.error('getBinanceCandles failed', err);
+    const body: { error: string; detail?: string } = {
+      error: 'upstream_unavailable',
+    };
+    if (process.env.NODE_ENV === 'development' && err instanceof Error) {
+      body.detail = err.message;
+    }
+    return NextResponse.json(body, { status: 502 });
   }
 }
