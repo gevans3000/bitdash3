@@ -40,13 +40,17 @@ function useAutoRefresh<T>(fetcher: () => Promise<T>, interval = 15_000) {
 }
 
 async function fetchCandles() {
-  const res = await fetch('/api/candles');
-  if (!res.ok) throw new Error('api error');
-  return (await res.json()) as Candle[];
+  try {
+    const res = await fetch('/api/candles');
+    if (!res.ok) throw new Error('api error');
+    return (await res.json()) as Candle[];
+  } catch {
+    throw new Error('Data unavailable \u2014 retrying');
+  }
 }
 
 export default function Page() {
-  const { data: candles, error, loading } = useAutoRefresh(fetchCandles);
+  const { data: candles, error, loading } = useAutoRefresh(fetchCandles, 60_000);
   
   return (
     <main className="min-h-screen bg-neutral-950 text-white p-6">
