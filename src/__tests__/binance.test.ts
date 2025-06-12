@@ -22,6 +22,7 @@ describe('getBinanceCandles', () => {
   afterEach(() => {
     // @ts-expect-error - jest adds fetch during tests
     delete global.fetch;
+    delete process.env.BINANCE_BASE_URL;
   });
 
   it('maps response to candle objects', async () => {
@@ -34,5 +35,13 @@ describe('getBinanceCandles', () => {
     expect(sample).toHaveProperty('low');
     expect(sample).toHaveProperty('close');
     expect(sample).toHaveProperty('volume');
+  });
+
+  it('uses custom base url when provided', async () => {
+    process.env.BINANCE_BASE_URL = 'https://custom.com/api/v3';
+    await getBinanceCandles();
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://custom.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=100'
+    );
   });
 });

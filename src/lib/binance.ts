@@ -8,9 +8,12 @@ export async function getBinanceCandles(limit = 100): Promise<Candle[]> {
   }
   lastCall = Date.now();
 
-  const url =
-    process.env.BINANCE_BASE_URL ??
-    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=${limit}`;
+  const base =
+    (process.env.BINANCE_BASE_URL ?? 'https://api.binance.com/api/v3').replace(
+      /\/$/,
+      ''
+    );
+  const url = `${base}/klines?symbol=BTCUSDT&interval=5m&limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('fetch_failed');
   // Binance returns [ open time, open, high, low, close, volume, ... ]
