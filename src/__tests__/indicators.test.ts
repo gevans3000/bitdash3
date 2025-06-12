@@ -3,15 +3,17 @@ import originalConfig from '@/config/signals.json';
 
 function loadSignal(cfg = originalConfig) {
   jest.resetModules();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   const config = require('@/config/signals.json');
   Object.assign(config, cfg);
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   return require('@/lib/signal').getSignal as typeof import('@/lib/signal').getSignal;
 }
 import type { Candle } from '@/lib/types';
 
 function genCandles(prices: number[], volume: number | number[] = 100): Candle[] {
   return prices.map((p, i) => ({
+    time: i,
     open: p,
     high: p,
     low: p,
