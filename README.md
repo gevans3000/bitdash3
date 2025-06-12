@@ -11,6 +11,11 @@ npm run dev
 
 ## Tests
 
+```bash
+npm run test
 ```
-npm test
-```
+
+## Binance API
+
+Binance limits requests to **1200 per minute**. The `/api/candles` route caches
+responses for 60 seconds, so the app stays well below this limit.
