@@ -1,6 +1,5 @@
 import type { Candle } from './types';
 
-const BASE_URL = process.env.BINANCE_BASE_URL ?? 'https://api.binance.com';
 let lastCall = 0;
 
 export async function getBinanceCandles(limit = 100): Promise<Candle[]> {
@@ -9,7 +8,9 @@ export async function getBinanceCandles(limit = 100): Promise<Candle[]> {
   }
   lastCall = Date.now();
 
-  const url = `${BASE_URL}/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=${limit}`;
+  const url =
+    process.env.BINANCE_BASE_URL ??
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('fetch_failed');
   // Binance returns [ open time, open, high, low, close, volume, ... ]
