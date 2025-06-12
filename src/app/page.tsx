@@ -26,6 +26,7 @@ function useAutoRefresh<T>(fetcher: () => Promise<T>, interval = 15_000) {
 
 async function fetchCandles() {
   const res = await fetch('/api/candles');
+  if (!res.ok) throw new Error('api error');
   return (await res.json()) as Candle[];
 }
 
