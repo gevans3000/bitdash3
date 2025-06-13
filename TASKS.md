@@ -1,96 +1,144 @@
-# TASKS — Bitdash Pro (Granular)
+# TASKS — Bitcoin 5-Minute Decision Dashboard
 
-Goal: Create an advanced, institutional-grade Bitcoin trading intelligence dashboard with **minimal code & compute** — using Next.js, React, and TypeScript without requiring additional servers, queues, or databases when possible.
+Goal: Create a minimalist, high-performance decision support system specifically optimized for making Bitcoin trading decisions on the 5-minute timeframe with **minimal code & compute** — using Next.js, React, and TypeScript without requiring additional infrastructure.
 
 ---
 
-# IMPLEMENTATION PHASES
+# PRIORITY IMPLEMENTATION ORDER
 
-## Phase 1: Core Foundation
-*These tasks establish the fundamental architecture and must be completed first*
+## 1. Core Signal Generation for 5-Minute Decisions
 
-### Data Pipeline
-*From original sections: 1, 12*
-- 1.1 Enhance `app/api/candles/route.ts` with multiple timeframes support
-- 1.4 Create `app/api/market-data/route.ts` for combined market metrics
-- 12.1 Implement Data Source Fallback System with CoinGecko integration
+### Technical Analysis for 5m Candles
+- Implement 5-minute specific indicator calculations in `src/lib/indicators/moving-averages.ts`
+  - Fast/Slow EMA crossover detection (9/21 EMA)
+  - VWAP deviation tracking for 5-minute charts
+  - Hull Moving Average for noise reduction
+- Add Volume Profile indicator for 5-minute timeframe in `src/lib/indicators/volume.ts`
+- Create momentum oscillators in `src/lib/indicators/oscillators.ts` tuned to 5-minute volatility
+  - RSI with optimal 5m settings (14 period)
+  - MACD with 5m-specific parameters (12/26/9)
+  - Stochastic with 5m noise filtering
 
-### Base Components
-*From original sections: 5, 6*
-- 5.1 Create `src/components/PriceDisplay.tsx` for real-time price
-- 6.1 Create reusable data card component
-- 6.2 Implement responsive layout grid system
+### Signal Generator & Decision Framework
+- Develop `src/lib/signals/conditions.ts` with 5-minute specific pattern recognition
+  - Price action patterns (engulfing, hammer, shooting star)
+  - Support/Resistance breakouts on 5m chart
+  - Volume confirmation thresholds for 5m signals
+- Implement signal generator in `src/lib/signals/generator.ts` with significance weighting
+  - Build confluence system scoring for 5-minute signals
+  - Add trend-direction filtering to reduce false signals
+  - Create entry/exit timing optimizers for 5m timeframe
+- Create `src/hooks/useSignals.ts` with 5-minute specific initialization
 
-## Phase 2: Parallel Development Tracks
-*These tracks can be developed simultaneously after Phase 1*
+## 2. Real-time Market Data Acquisition & Processing
 
-### Track A: Real-time Data & WebSockets
-*From original sections: 2, 12*
-- 2.1 Create `src/lib/websocket-manager.ts`
-- 2.2 Create `src/hooks/useWebSocket.ts` React hook
-- 2.3 Add WebSocket streams for key data types
-- 12.4 Enhance WebSocket Connection Handling with fallback mechanisms
+### High-Performance Data Pipeline
+- Create `app/api/market-data/route.ts` optimized for 5-minute decision-making
+  - Ensure 5-minute candles are prioritized in data retrieval
+  - Add order book imbalance metrics specifically for short timeframes
+  - Include trade flow indicators (buy/sell pressure) for 5-minute windows
+- Implement Data Source Fallback System with multiple exchanges
+  - Binance as primary source for 5-minute data quality
+  - CoinGecko as fallback with 5-minute data adaptation
+  - Local mock data for testing 5-minute strategies offline
 
-### Track B: Technical Analysis Engine
-*From original sections: 3, 4, 13*
-- 3.1 Create `src/lib/indicators/moving-averages.ts`
-- 3.2 Create `src/lib/indicators/oscillators.ts`
-- 3.3 Create `src/lib/indicators/volatility.ts`
-- 3.4 Create `src/lib/indicators/volume.ts`
-- 13.4 Add Ichimoku Cloud Technical Indicator
+### WebSocket Integration for 5-Minute Decision Making
+- Create `src/lib/websocket-manager.ts` with connection stability focus
+  - Prioritize low-latency processing for 5-minute signals
+  - Add automatic reconnection optimized for critical 5m candle transitions
+- Create `src/hooks/useWebSocket.ts` hook focused on 5-minute data streams
+  - Stream real-time trades with 5-minute aggregation
+  - Add order book updates with 5-minute significance filtering
+  - Create price tick data with momentum markers for 5-minute candles
 
-### Track C: Data Visualization & UI
-*From original sections: 7, 8, 9*
-- 7.1 Create `src/components/OrderBookVisualizer.tsx`
-- 7.2 Create `src/components/TradesTable.tsx`
-- 8.1 Implement `src/components/CandlestickChart.tsx`
-- 8.2 Create chart overlay system
-- 9.1 Create dark mode UI theme
+### Data Resilience for Critical 5-Minute Windows
+- Enhance Client-Side Caching for 5-minute strategy components
+  - Implement IndexedDB storage for historical 5-minute patterns
+  - Create localStorage fallback for critical 5-minute signals
+- Add Data Freshness Indication specific to 5-minute decision requirements
+  - Visual indicators for stale 5-minute data
+  - Warning system for missing 5-minute candles
 
-### Track D: Caching & Optimization
-*From original sections: 12*
-- 12.2 Enhance Client-Side (Browser) Caching with localStorage and IndexedDB
-- 12.3 Add Data Freshness Indication & Cache Invalidation
+## 3. Multi-Factor Decision Support System
 
-## Phase 3: Integration Features
-*These features depend on components from Phase 2*
+### Market Context for 5-Minute Decisions
+- Create `app/api/market-context/route.ts` for 5-minute relevant factors
+  - Volatility regime detection for 5-minute candle context
+  - Recent support/resistance levels most relevant to current 5-minute action
+  - Market session data (Asia/Europe/US) affecting 5-minute patterns
+- Add Open Interest Delta calculation focused on 5-minute momentum shifts
+  - Detect leverage ratio changes relevant to 5-minute price action
+  - Track funding rate changes affecting 5-minute volatility
+  - Calculate liquidation levels near current 5-minute price action
 
-### Signal Generation & Decision Support
-*From original sections: 4, 11*
-- 4.1 Create `src/lib/signals/conditions.ts`
-- 4.2 Create `src/lib/signals/generator.ts`
-- 4.3 Create `src/hooks/useSignals.ts`
-- 11.1 Implement Real-Time Core Market Data with WebSockets
-- 11.4 Develop Signal Confluence System for 5-Minute Chart
+### Trading Decision Framework
+- Create `src/hooks/useDecisionSupport.ts` with 5-minute specific logic
+  - Implement buy/sell decision scoring system for 5-minute entries
+  - Add position sizing recommendations based on 5-minute signal strength
+  - Create stop-loss and take-profit calculators optimized for 5-minute trades
+- Develop Signal Confluence System specifically for 5-Minute Chart
+  - Weight technical signals by 5-minute timeframe relevance
+  - Add trend alignment checking across multiple timeframes
+  - Create multi-factor confirmation scoring for high-conviction signals
 
-### Advanced Analytics
-*From original sections: 11, 13*
-- 11.2 Create `app/api/social-sentiment/route.ts`
-- 11.3 Create `app/api/macro-context/route.ts`
-- 11.5 Create `src/hooks/useDecisionSupport.ts`
-- 13.1 Create `app/api/btc-onchain/route.ts`
-- 13.2 Create `src/components/OnChainInsightsPanel.tsx`
-- 13.3 Add Open Interest Delta calculation
+### Entry/Exit Precision Tools
+- Create `src/components/TradeEntry.tsx` optimized for 5-minute execution
+  - Add ideal entry zone visualization for 5-minute signals
+  - Implement dynamic stop calculation based on 5-minute volatility
+  - Create take-profit ladder suggestions for 5-minute position management
 
-### Portfolio Management
-*From original section: 5*
-- 5.2 Create `src/components/PortfolioSummary.tsx`
-- 5.3 Create `src/components/TradeEntry.tsx`
+## 4. Decision Visualization & UI Components
 
-## Phase 4: Advanced Features & Performance
-*Final features and optimizations after core functionality is established*
+### 5-Minute Chart Analysis Components
+- Implement `src/components/CandlestickChart.tsx` with 5-minute optimizations
+  - Add 5-minute specific annotations (signal markers, momentum shifts)
+  - Create visual highlighting for high-probability 5-minute setups
+  - Implement trend line detection focused on 5-minute relevance
+- Create `src/components/OrderBookVisualizer.tsx` for short-term insights
+  - Add order book imbalance heatmap for 5-minute price impact detection
+  - Implement visual liquidity gaps indicator for 5-minute breakout potential
+  - Create dynamic support/resistance visualization from order book depth
 
-### Backtesting Engine
-*From original section: 14*
-- 14.1 Create `src/lib/backtesting/engine.ts`
-- 14.2 Build `src/components/BacktestConfigPanel.tsx`
-- 14.3 Create `src/components/BacktestResultsPanel.tsx`
+### Decision Dashboard Layout
+- Create reusable decision card components for 5-minute signals
+  - Implement traffic-light system for rapid decision recognition
+  - Add expiration timers for 5-minute limited signals
+- Create `src/components/PriceDisplay.tsx` with 5-minute context
+  - Add price movement velocity indicator for 5-minute momentum
+  - Implement price reversal alerts for 5-minute signal invalidation
+  - Create visual comparison to previous 5-minute close/high/low
 
-### Optimization & Deployment
-*From original section: 10*
-- 10.1 Conduct performance audit
-- 10.2 Apply optimization strategies
-- 10.3 Create deployment workflow
+### User Interface Optimization
+- Implement dark mode UI theme optimized for extended monitoring sessions
+- Add focus mode highlighting only actionable 5-minute signals
+- Create responsive layout system prioritizing critical decision components
+
+## 5. Performance & Strategy Validation
+
+### 5-Minute Strategy Backtesting
+- Create `src/lib/backtesting/engine.ts` specific to 5-minute strategies
+  - Implement historical 5-minute candle replay system
+  - Add performance metrics focused on 5-minute trading (win rate, drawdown)
+  - Create Monte Carlo simulation for 5-minute strategy robustness testing
+- Build `src/components/BacktestConfigPanel.tsx` for 5-minute strategy tuning
+  - Add parameter optimization for 5-minute specific indicators
+  - Implement market condition filters for 5-minute backtest scenarios
+  - Create session-specific (Asia/Europe/US) testing for 5-minute patterns
+- Create `src/components/BacktestResultsPanel.tsx` with 5-minute insights
+  - Add detailed performance metrics for 5-minute trading assessment
+  - Implement visual comparison of different 5-minute strategies
+  - Create optimization suggestions based on backtest results
+
+### Optimization & Production Readiness
+- Conduct performance audit focused on critical 5-minute decision points
+  - Test rendering performance during 5-minute candle transitions
+  - Measure data processing latency for real-time 5-minute signals
+  - Evaluate memory usage during extended 5-minute trading sessions
+- Apply optimization strategies for low-latency decision making
+  - Implement memoization of intensive 5-minute calculations
+  - Add worker threads for non-blocking signal processing
+  - Create efficient data structures for 5-minute pattern recognition
+- Create deployment workflow optimized for stable trading environment
 
 ---
 
