@@ -70,3 +70,5 @@ export function vwap(candles: Candle[]): number {
   }
   return cumPV / (cumVol || 1e-9);
 }
+
+export { ichimoku } from './indicators/ichimoku';

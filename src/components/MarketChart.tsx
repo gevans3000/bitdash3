@@ -28,7 +28,12 @@ export default function MarketChart() {
         container_id: 'tv-chart',
         width: '100%',
         height: 400,
-        studies: ['BB@tv-basicstudies', 'VWAP@tv-basicstudies', 'RSI@tv-basicstudies'],
+        studies: [
+          'BB@tv-basicstudies',
+          'VWAP@tv-basicstudies',
+          'RSI@tv-basicstudies',
+          'IchimokuCloud@tv-basicstudies',
+        ],
         hide_top_toolbar: false,
         hide_legend: false,
         theme: 'dark',
