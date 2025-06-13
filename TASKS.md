@@ -365,7 +365,7 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
   • Implement hysteresis detection to avoid oscillation during consolidation periods
   • Add API fallback hierarchy for critical signals when primary source is unavailable
 
-11.5 Create `src/hooks/useDecisionSupport.ts`
+11.5 Create `src/hooks/useDecisionSupport.ts` — DONE
   • Combine technical indicators, order book pressure, sentiment and macro context
   • Calculate aggregated decision confidence score (0-100%) for buy/sell signals
   • Include divergence detection between price action and underlying metrics
