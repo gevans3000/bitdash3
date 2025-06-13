@@ -445,17 +445,17 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
 
 ## 14 · Lightweight Backtesting Engine
 
-14.1 Create `src/lib/backtesting/engine.ts`
+14.1 Create `src/lib/backtesting/engine.ts` — DONE
   • Implement core logic using cached historical data to minimize external calls
   • Create modular signal evaluation against historical price movements
   • Add performance metrics calculation (win rate, profit factor, drawdown)
 
-14.2 Build `src/components/BacktestConfigPanel.tsx`
+14.2 Build `src/components/BacktestConfigPanel.tsx` — DONE
   • Create minimal UI for selecting test parameters and time ranges
   • Implement strategy presets to simplify configuration
   • Add validation to prevent resource-intensive test scenarios
 
-14.3 Create `src/components/BacktestResultsPanel.tsx`
+14.3 Create `src/components/BacktestResultsPanel.tsx` — DONE
   • Build compact results display with key performance metrics
   • Add visualization of trades on a minimal chart
   • Include equity curve with option to export results
