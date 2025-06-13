@@ -1,92 +1,38 @@
 'use client';
 
-import { SignalCard } from '@/components/SignalCard';
-import { IndicatorCard } from '@/components/IndicatorCard';
+import LiveDashboard from '@/components/LiveDashboard';
 import MarketChart from '@/components/MarketChart';
-import { getSignal } from '@/lib/signal';
-import { Candle } from '@/lib/types';
-import { useEffect, useState } from 'react';
-
-function useAutoRefresh<T>(fetcher: () => Promise<T>, interval = 15_000) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let mounted = true;
-    
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetcher();
-        if (mounted) setData(res);
-      } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    
-    load();
-    const id = setInterval(load, interval);
-    return () => {
-      mounted = false;
-      clearInterval(id);
-    };
-  }, [fetcher, interval]);
-  
-  return { data, error, loading };
-}
-
-async function fetchCandles() {
-  try {
-    const res = await fetch('/api/candles');
-    if (!res.ok) {
-      const err = new Error('api error') as Error & { status?: number };
-      err.status = res.status;
-      throw err;
-    }
-    return (await res.json()) as Candle[];
-  } catch (err: unknown) {
-    const status = (err as { status?: number })?.status;
-    const statusMsg = status ? ` (status ${status})` : '';
-    throw new Error(`Data unavailable \u2014 retrying${statusMsg}`);
-  }
-}
+import { useState } from 'react';
 
 export default function Page() {
-  const { data: candles, error, loading } = useAutoRefresh(fetchCandles, 60_000);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
+  const handleRefresh = () => {
+    setRefreshTrigger(Date.now());
+  };
   return (
     <main className="min-h-screen bg-neutral-950 text-white p-6">
       <div className="space-y-6 max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold text-center">BitDash</h1>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <h1 className="text-2xl font-bold text-center">BitDash Pro</h1>
+          <button 
+            onClick={handleRefresh} 
+            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            title="Refresh Data"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
         
-        {loading && !candles && (
-          <div className="rounded-xl bg-white/5 p-8 text-center">
-            <div className="animate-pulse text-lg">Loading data...</div>
-          </div>
-        )}
+        {/* TradingView Chart */}
+        <div className="rounded-xl bg-white/5 p-4 shadow-lg">
+          <MarketChart />
+        </div>
         
-        {error && (
-          <div className="rounded-xl bg-red-900/20 border border-red-800 p-6 text-center">
-            <div className="text-red-400 mb-2">Error loading data</div>
-            <div className="text-sm text-white/60">{error}</div>
-          </div>
-        )}
-        
-        {candles && candles.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SignalCard signal={getSignal(candles)} />
-              <IndicatorCard candles={candles} />
-            </div>
-            <div className="rounded-xl bg-white/5 p-4 shadow-[var(--tw-shadow-elevation-medium)]">
-              <MarketChart />
-            </div>
-          </>
-        )}
+        {/* Live Dashboard with WebSocket Data */}
+        <LiveDashboard refreshTrigger={refreshTrigger} />
       </div>
     </main>
   );

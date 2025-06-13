@@ -27,23 +27,48 @@ export class WebSocketManager {
   private maxReconnectAttempts = 10;
   private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private statusListeners: ((status: ConnectionStatus) => void)[] = [];
+  private reconnectionEnabled = true;
 
   /**
    * Connect to the Binance WebSocket server
    */
   connect(): void {
+    // Already connected or connecting
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return; // Already connected or connecting
+      return;
     }
-
+    
+    // If there are no subscriptions, don't try to connect
+    if (this.subscriptions.size === 0) {
+      return;
+    }
+    
+    // Skip connection if reconnection is disabled
+    if (!this.reconnectionEnabled) {
+      return;
+    }
+    
     this.setStatus('connecting');
     
     try {
       // Create streams string from current subscriptions
       const streams = Array.from(this.subscriptions.keys()).join('/');
-      const url = streams ? `${BINANCE_WS_BASE}/${streams}` : BINANCE_WS_BASE;
+      if (!streams) {
+        // Don't attempt to connect if there are no streams
+        this.setStatus('disconnected');
+        return;
+      }
       
-      this.ws = new WebSocket(url);
+      const url = `${BINANCE_WS_BASE}/${streams}`;
+      
+      // Wrap WebSocket creation in a try/catch block
+      try {
+        this.ws = new WebSocket(url);
+      } catch (err) {
+        // WebSocket creation failed - quietly set status without error message
+        this.setStatus('error');
+        return;
+      }
       
       this.ws.onopen = () => {
         this.setStatus('connected');
@@ -63,7 +88,10 @@ export class WebSocketManager {
       };
       
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        // Only log error if reconnection is enabled to prevent noise in console
+        if (this.reconnectionEnabled) {
+          console.log('WebSocket connection issue detected');
+        }
         this.setStatus('error');
         // Don't reconnect here, wait for onclose which will be called after error
       };
@@ -98,6 +126,26 @@ export class WebSocketManager {
     }
     
     this.setStatus('disconnected');
+  }
+  
+  /**
+   * Enable or disable automatic reconnection
+   */
+  setReconnectionEnabled(enabled: boolean): void {
+    this.reconnectionEnabled = enabled;
+    
+    // If we're disabling reconnection and have a pending reconnect, cancel it
+    if (!enabled && this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+  }
+  
+  /**
+   * Check if automatic reconnection is enabled
+   */
+  isReconnectionEnabled(): boolean {
+    return this.reconnectionEnabled;
   }
 
   /**
@@ -291,26 +339,31 @@ export class WebSocketManager {
   }
 
   /**
-   * Reconnect with exponential backoff
+   * Reconnect to the WebSocket server with exponential backoff
    */
   private reconnect(): void {
+    // Skip reconnection if it's been disabled
+    if (!this.reconnectionEnabled) {
+      console.log('WebSocket reconnection is disabled, skipping reconnect');
+      return;
+    }
+    
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log(`Maximum reconnection attempts (${this.maxReconnectAttempts}) reached`);
+      return;
+    }
+
+    const backoffTime = Math.pow(2, this.reconnectAttempts) * 1000; // Exponential backoff
+    console.log(`Reconnecting WebSocket in ${backoffTime}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+    
     if (this.reconnectTimeoutId) {
       clearTimeout(this.reconnectTimeoutId);
     }
     
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error(`Maximum reconnection attempts (${this.maxReconnectAttempts}) reached`);
-      return;
-    }
-    
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    console.log(`Reconnecting WebSocket in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
-    
-    this.reconnectAttempts++;
-    
     this.reconnectTimeoutId = setTimeout(() => {
+      this.reconnectAttempts += 1;
       this.connect();
-    }, delay);
+    }, backoffTime);
   }
 
   /**

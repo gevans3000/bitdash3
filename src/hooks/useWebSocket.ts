@@ -28,6 +28,15 @@ export function useWebSocket() {
       webSocketManager.removeStatusListener(handleStatusChange);
     };
   }, []);
+  
+  // Control reconnection behavior
+  const enableReconnection = useCallback(() => {
+    webSocketManager.setReconnectionEnabled(true);
+  }, []);
+  
+  const disableReconnection = useCallback(() => {
+    webSocketManager.setReconnectionEnabled(false);
+  }, []);
 
   // Utility for subscribing to candle updates
   const subscribeToCandles = useCallback(
@@ -78,6 +87,8 @@ export function useWebSocket() {
     subscribeToCandles,
     subscribeToOrderBook,
     subscribeToTrades,
+    enableReconnection,
+    disableReconnection,
   };
 }
 
@@ -85,13 +96,26 @@ export function useWebSocket() {
  * Hook for subscribing to candle updates
  * @param symbol Trading pair (e.g., 'btcusdt')
  * @param interval Candlestick interval (e.g., '5m')
+ * @param shouldConnect Whether to actively connect to WebSocket (default: true)
  * @returns [candles, status]
  */
-export function useCandles(symbol: string, interval: string) {
+export function useCandles(symbol: string, interval: string, shouldConnect: boolean = true) {
   const [candles, setCandles] = useState<Candle[]>([]);
-  const { status, subscribeToCandles } = useWebSocket();
+  const { status, subscribeToCandles, disableReconnection } = useWebSocket();
+  
+  // Make sure reconnection is disabled when shouldConnect is false
+  useEffect(() => {
+    if (!shouldConnect) {
+      disableReconnection();
+    }
+  }, [shouldConnect, disableReconnection]);
 
   useEffect(() => {
+    // Skip entire subscription process if not connecting
+    if (!shouldConnect) {
+      return;
+    }
+    
     // Define candle handler
     const handleCandle = (candle: Candle) => {
       setCandles(prev => {
@@ -112,13 +136,23 @@ export function useCandles(symbol: string, interval: string) {
       });
     };
 
-    // Subscribe to candle updates
-    const unsubscribe = subscribeToCandles(symbol, interval, handleCandle);
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [symbol, interval, subscribeToCandles]);
+    // Use a try-catch to handle WebSocket connection errors silently
+    try {
+      // Subscribe to candle updates
+      const unsubscribe = subscribeToCandles(symbol, interval, handleCandle);
+      
+      return () => {
+        try {
+          unsubscribe();
+        } catch (err) {
+          // Silently handle unsubscribe errors
+        }
+      };
+    } catch (err) {
+      // Silently handle subscription errors
+      return () => {};
+    }
+  }, [symbol, interval, subscribeToCandles, shouldConnect]);
 
   return [candles, status] as const;
 }
@@ -126,29 +160,50 @@ export function useCandles(symbol: string, interval: string) {
 /**
  * Hook for subscribing to order book updates
  * @param symbol Trading pair (e.g., 'btcusdt')
- * @param depth Order book depth (default: 20)
- * @param updateSpeed Update speed (default: '100ms')
+ * @param shouldConnect Whether to actively connect to WebSocket (default: true)
  * @returns [orderBook, status]
  */
 export function useOrderBook(
-  symbol: string, 
+  symbol: string,
+  shouldConnect: boolean = true,
   depth = 20, 
   updateSpeed: '100ms' | '1000ms' = '100ms'
 ) {
   const [orderBook, setOrderBook] = useState<OrderBookData | null>(null);
-  const { status, subscribeToOrderBook } = useWebSocket();
+  const { status, subscribeToOrderBook, disableReconnection } = useWebSocket();
+  
+  // Make sure reconnection is disabled when shouldConnect is false
+  useEffect(() => {
+    if (!shouldConnect) {
+      disableReconnection();
+    }
+  }, [shouldConnect, disableReconnection]);
 
   useEffect(() => {
+    // Skip entire subscription process if not connecting
+    if (!shouldConnect) {
+      return;
+    }
+    
     const handleOrderBook = (data: OrderBookData) => {
       setOrderBook(data);
     };
 
-    const unsubscribe = subscribeToOrderBook(symbol, handleOrderBook, depth, updateSpeed);
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [symbol, depth, updateSpeed, subscribeToOrderBook]);
+    try {
+      const unsubscribe = subscribeToOrderBook(symbol, handleOrderBook, depth, updateSpeed);
+      
+      return () => {
+        try {
+          unsubscribe();
+        } catch (err) {
+          // Silently handle unsubscribe errors
+        }
+      };
+    } catch (err) {
+      // Silently handle subscription errors
+      return () => {};
+    }
+  }, [symbol, depth, updateSpeed, subscribeToOrderBook, shouldConnect]);
 
   return [orderBook, status] as const;
 }
@@ -156,14 +211,27 @@ export function useOrderBook(
 /**
  * Hook for subscribing to trade updates
  * @param symbol Trading pair (e.g., 'btcusdt')
+ * @param shouldConnect Whether to actively connect to WebSocket (default: true)
  * @returns [trades, status]
  */
-export function useTrades(symbol: string) {
+export function useTrades(symbol: string, shouldConnect: boolean = true) {
   // Keep a limited number of recent trades
   const [trades, setTrades] = useState<Trade[]>([]);
-  const { status, subscribeToTrades } = useWebSocket();
+  const { status, subscribeToTrades, disableReconnection } = useWebSocket();
+  
+  // Make sure reconnection is disabled when shouldConnect is false
+  useEffect(() => {
+    if (!shouldConnect) {
+      disableReconnection();
+    }
+  }, [shouldConnect, disableReconnection]);
 
   useEffect(() => {
+    // Skip entire subscription process if not connecting
+    if (!shouldConnect) {
+      return;
+    }
+    
     const handleTrade = (trade: Trade) => {
       setTrades(prev => {
         // Add new trade and limit to last 50 trades
@@ -172,12 +240,21 @@ export function useTrades(symbol: string) {
       });
     };
 
-    const unsubscribe = subscribeToTrades(symbol, handleTrade);
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [symbol, subscribeToTrades]);
+    try {
+      const unsubscribe = subscribeToTrades(symbol, handleTrade);
+      
+      return () => {
+        try {
+          unsubscribe();
+        } catch (err) {
+          // Silently handle unsubscribe errors
+        }
+      };
+    } catch (err) {
+      // Silently handle subscription errors
+      return () => {};
+    }
+  }, [symbol, subscribeToTrades, shouldConnect]);
 
   return [trades, status] as const;
 }
