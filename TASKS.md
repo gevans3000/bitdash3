@@ -283,3 +283,46 @@ Implementation Note: Prioritize tasks based on core functionality and gradually 
   • Add clear UI indication of connection state with auto-reconnect attempts
   • Implement fallback to REST API polling when WebSocket is persistently unavailable
   • Add data consistency verification between WebSocket and REST data sources
+
+---
+
+## 13 · Bitcoin On-Chain Data & Network Analytics
+
+13.1 Create `app/api/btc-onchain/route.ts`
+  • Implement endpoint for essential on-chain metrics (transaction count, fees, etc.)
+  • Add 1-hour caching with revalidation for these less frequently changing metrics
+  • Implement lightweight data normalization to reduce payload size
+
+13.2 Create `src/components/OnChainInsightsPanel.tsx`
+  • Build a compact UI component showing key on-chain metrics
+  • Add visual indicators for unusual network activity
+  • Include togglable detail view for in-depth analysis
+
+13.3 Add Open Interest Delta calculation
+  • Extend market data endpoints to include derivatives open interest data
+  • Implement delta calculation with configurable time windows (1h, 24h)
+  • Add visualization to highlight significant OI changes
+
+13.4 Add Ichimoku Cloud Technical Indicator
+  • Create `src/lib/indicators/ichimoku.ts` with efficient implementation
+  • Extend charting components to support cloud overlay visualization
+  • Add signal generation based on Ichimoku crossovers and cloud breakouts
+
+---
+
+## 14 · Lightweight Backtesting Engine
+
+14.1 Create `src/lib/backtesting/engine.ts`
+  • Implement core logic using cached historical data to minimize external calls
+  • Create modular signal evaluation against historical price movements
+  • Add performance metrics calculation (win rate, profit factor, drawdown)
+
+14.2 Build `src/components/BacktestConfigPanel.tsx`
+  • Create minimal UI for selecting test parameters and time ranges
+  • Implement strategy presets to simplify configuration
+  • Add validation to prevent resource-intensive test scenarios
+
+14.3 Create `src/components/BacktestResultsPanel.tsx`
+  • Build compact results display with key performance metrics
+  • Add visualization of trades on a minimal chart
+  • Include equity curve with option to export results
