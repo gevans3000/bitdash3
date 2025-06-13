@@ -4,175 +4,119 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
 
 ---
 
-# PARALLEL WORKSTREAMS
+# RISK-MINIMIZING IMPLEMENTATION SEQUENCE
 
-## Workstream A: Market Data Infrastructure
+## 1. Core Data Foundation
+*Building on existing caching and data freshness components*
 
-### A1. API Routes & Data Pipeline
-- Create `app/api/market-data/route.ts` for consolidated market data
-  - Implement multiple timeframes with priority for 5-minute candles
-  - Add order book imbalance metrics for short timeframes
-  - Include trade flow indicators and volume analysis
-- Build data source fallback system
-  - Primary source: Binance API
-  - Secondary source: CoinGecko API
-  - Offline capability: Local mock data generators
-- Add automatic reconnection logic with exponential backoff
+### 1.1 Basic Market Data API (Low Risk)
+- Enhance existing `app/api/market-data/route.ts` for 5-minute specific data:
+  - Add 5-minute candle prioritization in API responses
+  - Keep existing fallback mechanisms (Binance → CoinGecko → Mock)
+  - Leverage existing cache implementation without modifications
 
-### A2. Real-time WebSocket Integration
-- Create `src/lib/websocket-manager.ts` for connection handling
-  - Implement auto-reconnect with prioritized 5m candle handling
-  - Add message parsing for different stream types
-- Develop `src/hooks/useWebSocket.ts` React hook
-  - Add connection status tracking (connected/disconnected/error)
-  - Implement subscription management tied to component lifecycle
-- Set up critical data streams
-  - `btcusdt@kline_5m` for real-time candle updates
-  - `btcusdt@depth20@100ms` for order book
-  - `btcusdt@aggTrade` for trade execution data
+### 1.2 Technical Indicator Core (Low Risk)
+- Create simple, pure calculation functions in `src/lib/indicators/`:
+  - Implement basic moving averages (EMA, SMA) first
+  - Add basic momentum oscillators (RSI, MACD)
+  - Test extensively with static data before integration
 
-### A3. Data Resilience & Caching
-- Implement browser caching strategy
-  - Use IndexedDB for historical patterns storage
-  - Set up localStorage for critical signals backup
-- Create data freshness monitoring
-  - Add timestamp tracking for all data sources
-  - Implement visual indicators for stale data
-  - Build warning system for missing 5-minute candles
+### 1.3 Minimal UI Components (Low Risk)
+- Set up basic UI structure with simple, stateless components:
+  - Create reusable card components for data display
+  - Implement basic price display component
+  - Add responsive grid layout foundation
 
-## Workstream B: Technical Analysis Engine
+## 2. Signal Generation & WebSockets
+*Adding real-time capabilities with careful state management*
 
-### B1. Core Technical Indicators
-- Implement moving averages library in `src/lib/indicators/moving-averages.ts`
-  - Fast/Slow EMA crossover detection (9/21 EMA)
-  - SMA calculations (20, 50, 200)
-  - VWAP implementation with volume weighting
-  - Hull Moving Average for noise reduction
-- Create momentum oscillators in `src/lib/indicators/oscillators.ts`
-  - RSI with configurable periods (default 14)
-  - MACD with optimized parameters for 5m (12/26/9)
-  - Stochastic with noise filtering
-- Develop volatility indicators in `src/lib/indicators/volatility.ts`
-  - Bollinger Bands implementation (20, 2)
-  - ATR calculation for dynamic stop placement
-  - Volatility regime detection
-- Add volume analysis in `src/lib/indicators/volume.ts`
-  - Volume Profile for key levels
-  - OBV for trend confirmation
-  - Volume spike detection for breakouts
+### 2.1 Signal Generator Framework (Medium Risk)
+- Create signal detection system with strict separation of concerns:
+  - Build condition checkers that take data and return boolean results
+  - Implement signal scoring without side effects
+  - Add comprehensive test coverage for all signal logic
 
-### B2. Pattern Recognition
-- Develop `src/lib/signals/conditions.ts` for pattern detection
-  - Candlestick patterns (engulfing, hammer, doji)
-  - Support/Resistance breakout identification
-  - Volume confirmation thresholds 
-- Build signal generation system in `src/lib/signals/generator.ts`
-  - Implement weighted scoring system
-  - Add trend-direction filtering logic
-  - Create time-based signal expiration
+### 2.2 WebSocket Management (Medium Risk)
+- Implement WebSocket connection manager with careful error handling:
+  - Add connection with auto-reconnect and exponential backoff
+  - Create message parsing with data validation
+  - Include fallback to REST API on WebSocket failures
+  - Ensure all WebSocket code has appropriate cleanup
 
-### B3. Market Context Analysis
-- Create `app/api/market-context/route.ts` for broader context
-  - Volatility regime classification
-  - Support/resistance level identification
-  - Trading session detection (Asia/Europe/US)
-- Add derivatives market metrics
-  - Open Interest delta calculations
-  - Funding rate analysis
-  - Liquidation level detection
+### 2.3 Enhanced Data Visualization (Low Risk)
+- Add initial chart components building on stable data:
+  - Create basic candlestick chart using proven library
+  - Implement order book display with minimal state
+  - Add recent trades table with static rendering
 
-## Workstream C: Decision Support & Trading Intelligence
+## 3. Integration & Decision Framework
+*Connecting components with controlled data flow*
 
-### C1. Trading Decision Framework
-- Create `src/hooks/useSignals.ts` for signal management
-  - Implement state management for active signals
-  - Add signal history tracking
-  - Create auto-refresh mechanism with optimized state updates
-- Build `src/hooks/useDecisionSupport.ts` for trading decisions
-  - Implement buy/sell scoring system based on multiple factors
-  - Add position sizing recommendations with risk management
-  - Create dynamic stop-loss and take-profit calculators
-- Develop multi-factor signal confluence system
-  - Implement weighting for technical indicator signals
-  - Create trend alignment verification across timeframes
-  - Add high-conviction signal identification
+### 3.1 Signal Hook with Memoization (Medium Risk)
+- Implement `useSignals` hook with careful state management:
+  - Add memoization checks before recalculation
+  - Implement dependency tracking to prevent update loops
+  - Create debounced update mechanism for real-time data
+  - Test with various data update scenarios
 
-### C2. Entry/Exit Precision Tools
-- Create `src/components/TradeEntry.tsx` for trade execution
-  - Add ideal entry zone visualization
-  - Implement dynamic stop calculation based on volatility
-  - Create take-profit ladder suggestions with R:R ratios
-- Build trade management components
-  - Create position tracking dashboard component
-  - Add trade journal integration
+### 3.2 Enhanced Indicator Library (Low Risk)
+- Expand technical indicators with pure calculation patterns:
+  - Add Bollinger Bands and volatility measurements
+  - Implement Volume Profile and OBV calculations
+  - Create pattern detection for common candlestick formations
+  - Ensure all new indicators have unit tests
+
+### 3.3 Dashboard Integration (Medium Risk)
+- Connect components with controlled data flow:
+  - Implement dashboard layout with data dependencies
+  - Add visual data freshness indicators 
+  - Create component error boundaries for isolated failures
+
+## 4. Decision Support System
+*Building advanced features on stable foundation*
+
+### 4.1 Multi-factor Decision Framework (Medium Risk)
+- Create decision support system with isolation from UI:
+  - Implement confluence scoring for multiple signals
+  - Add timeframe alignment verification
+  - Create decision confidence calculation
+  - Test with historical data scenarios
+
+### 4.2 Advanced Chart Annotations (Low Risk)
+- Enhance chart visualization with signal overlay:
+  - Add signal markers to candlestick chart
+  - Implement support/resistance visualization
+  - Create pattern highlighting on chart
+
+### 4.3 Entry/Exit Tools (Medium Risk)
+- Build trade execution assistance components:
+  - Create entry zone visualization
+  - Add dynamic stop-loss calculator based on volatility
+  - Implement take-profit ladder with R:R ratios
+
+## 5. Performance & Production Readiness
+*Optimizing and validating the system*
+
+### 5.1 Performance Optimization (Low Risk)
+- Apply targeted optimization techniques:
+  - Add memoization for expensive calculations
+  - Implement component-level code splitting
+  - Add request batching and throttling
+  - Profile and optimize critical render paths
+
+### 5.2 Backtesting Engine (Medium Risk)
+- Build isolated backtesting functionality:
+  - Create historical data replay system
   - Implement performance metrics calculation
+  - Add parameter optimization capabilities
+  - Test with known historical scenarios
 
-## Workstream D: Visualization & Interface
-
-### D1. Chart & Data Visualization
-- Implement `src/components/CandlestickChart.tsx`
-  - Add custom annotations for signals and patterns
-  - Create visual highlighting for high-probability setups
-  - Build interactive trend line and support/resistance tools
-- Create `src/components/OrderBookVisualizer.tsx`
-  - Add heatmap for order book imbalance detection
-  - Implement liquidity gap visualization
-  - Build dynamic support/resistance overlay from depth data
-- Build `src/components/TradesTable.tsx` for trade flow
-  - Implement color coding for buyer/seller initiated trades
-  - Add volume clustering visualization
-  - Create real-time trade impact assessment
-
-### D2. Decision Interface Components
-- Create core UI components optimized for rapid decisions
-  - Implement traffic-light system for signal confidence
-  - Add expiration timers for time-sensitive signals
-  - Create focused action cards for trade decisions
-- Build `src/components/PriceDisplay.tsx`
-  - Add momentum velocity indicators
-  - Implement reversal alert system
-  - Create price comparison to previous levels
-- Develop responsive dashboard layout system
-  - Implement grid system with priority components
-  - Create dark mode optimized for extended sessions
-  - Add focus mode for critical trading periods
-
-## Workstream E: Testing & Optimization
-
-### E1. Backtesting Framework
-- Create `src/lib/backtesting/engine.ts` for strategy validation
-  - Implement efficient historical data replay system
-  - Add performance metrics calculation (win rate, drawdown, Sharpe)
-  - Build Monte Carlo simulation for robustness testing
-- Develop configuration components
-  - Create `src/components/BacktestConfigPanel.tsx` for parameters
-  - Build market condition filters for scenario testing
-  - Add session-specific testing capabilities
-- Build results visualization
-  - Create `src/components/BacktestResultsPanel.tsx` for metrics display
-  - Implement strategy comparison tools
-  - Add optimization suggestions based on results
-
-### E2. Performance Optimization
-- Conduct targeted performance audit
-  - Test rendering performance during high-activity periods
-  - Measure data processing latency for critical signals
-  - Analyze memory usage patterns during extended sessions
-- Implement optimization strategies
-  - Apply memoization for compute-intensive calculations
-  - Add worker threads for non-blocking signal processing
-  - Create efficient data structures for pattern recognition
-  - Implement request batching and throttling
-
-### E3. Production Readiness
-- Add error handling and resilience
-  - Implement comprehensive error boundaries
-  - Create graceful degradation for API failures
-  - Add automatic recovery mechanisms
-- Prepare deployment pipeline
-  - Create CI/CD workflow with automated testing
-  - Set up monitoring for critical components
-  - Add performance benchmarking
+### 5.3 Production Hardening (Low Risk)
+- Apply final resilience improvements:
+  - Add comprehensive error handling
+  - Implement graceful degradation paths
+  - Create monitoring and diagnostics
+  - Test under various failure conditions
 
 ---
 
