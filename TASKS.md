@@ -426,7 +426,7 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
   • Add 1-hour caching with revalidation for these less frequently changing metrics
   • Implement lightweight data normalization to reduce payload size
 
-13.2 Create `src/components/OnChainInsightsPanel.tsx`
+13.2 Create `src/components/OnChainInsightsPanel.tsx` — DONE
   • Build a compact UI component showing key on-chain metrics
   • Add visual indicators for unusual network activity
   • Include togglable detail view for in-depth analysis
