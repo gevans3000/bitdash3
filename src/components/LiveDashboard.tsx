@@ -7,6 +7,7 @@ import OnChainInsightsPanel from './OnChainInsightsPanel';
 import { useSignals } from '@/hooks/useSignals';
 import { browserCache, withCache } from '@/lib/cache/browserCache';
 import DataFreshnessIndicator from './DataFreshnessIndicator';
+import OpenInterestCard from './OpenInterestCard';
 
 interface LiveDashboardProps {
   refreshTrigger?: number;
@@ -17,6 +18,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   const [candles, setCandles] = useState<Candle[]>([]);
   const [orderBook, setOrderBook] = useState<OrderBookData | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [openInterest, setOpenInterest] = useState<number | null>(null);
+  const [oiDelta1h, setOiDelta1h] = useState<number | null>(null);
+  const [oiDelta24h, setOiDelta24h] = useState<number | null>(null);
   
   // Data source and freshness tracking
   const [dataSource, setDataSource] = useState<string>('cached');
@@ -116,6 +120,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
       setCandles(data.candles);
       setOrderBook(data.orderBook);
       setTrades(data.trades);
+      setOpenInterest(data.openInterest ?? null);
+      setOiDelta1h(data.openInterestDelta1h ?? null);
+      setOiDelta24h(data.openInterestDelta24h ?? null);
       setLastUpdated(data.timestamp);
       setDataSource(fromCache ? 'cached' : data.dataSource || 'api');
       
@@ -201,8 +208,15 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
         />
       </div>
 
-      {/* On-Chain Insights */}
-      <OnChainInsightsPanel />
+      {/* On-Chain Insights and Open Interest */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <OnChainInsightsPanel />
+        <OpenInterestCard
+          openInterest={openInterest}
+          delta1h={oiDelta1h}
+          delta24h={oiDelta24h}
+        />
+      </div>
       
       {/* Price Overview and Signals */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

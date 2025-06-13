@@ -19,4 +19,12 @@ describe('market-data API', () => {
     expect(sample.time).toBeLessThan(1e11); // should be seconds, not ms
     expect(sample.closeTime).toBe(sample.time + 5 * 60);
   });
+
+  it('includes open interest deltas', async () => {
+    const req = new Request('http://localhost/api/market-data');
+    const res = await GET(req);
+    const data = await res.json();
+    expect(data).toHaveProperty('openInterestDelta1h');
+    expect(data).toHaveProperty('openInterestDelta24h');
+  });
 });

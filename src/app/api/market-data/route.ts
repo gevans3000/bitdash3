@@ -12,6 +12,43 @@ interface DataSourceMetrics {
   successCount: number;
 }
 
+// Fetch derivatives open interest history and compute deltas
+async function fetchOpenInterestDeltas(symbol: string) {
+  const base = 'https://fapi.binance.com/futures/data/openInterestHist';
+  try {
+    const [h1Res, d1Res] = await Promise.all([
+      fetch(`${base}?symbol=${symbol}&period=5m&limit=12`, {
+        next: { revalidate: 60 },
+      }),
+      fetch(`${base}?symbol=${symbol}&period=1h&limit=25`, {
+        next: { revalidate: 300 },
+      }),
+    ]);
+
+    if (!h1Res.ok || !d1Res.ok) {
+      throw new Error('open interest fetch failed');
+    }
+
+    const hist1h = await h1Res.json();
+    const hist24h = await d1Res.json();
+
+    const parseVal = (e: any) =>
+      Number(e.sumOpenInterestValue ?? e.sumOpenInterest ?? e.openInterest);
+
+    const latest = parseVal(hist1h[hist1h.length - 1]);
+    const oneHourAgo = parseVal(hist1h[0]);
+    const dayAgo = parseVal(hist24h[0]);
+
+    const delta1h = oneHourAgo ? ((latest - oneHourAgo) / oneHourAgo) * 100 : 0;
+    const delta24h = dayAgo ? ((latest - dayAgo) / dayAgo) * 100 : 0;
+
+    return { openInterest: latest, delta1h, delta24h };
+  } catch (err) {
+    console.warn('Open interest fetch failed', err);
+    return { openInterest: 0, delta1h: 0, delta24h: 0 };
+  }
+}
+
 // Format raw Binance candle data to our app's format
 function formatCandles(rawCandles: any[]): Candle[] {
   return rawCandles.map(candle => ({
@@ -275,6 +312,7 @@ export async function GET(request: Request) {
     let usedFallbackApi = false;
     let usedMockData = false;
     let additionalData: Record<string, any> = {};
+    const oiData = await fetchOpenInterestDeltas(symbol);
     
     // 1. ATTEMPT BINANCE API
     dataSourceMetrics.binance.lastChecked = Date.now();
@@ -344,6 +382,11 @@ export async function GET(request: Request) {
     if (candles.length > 0 && orderBook && trades.length > 0) {
       dataSourceMetrics.binance.status = 'available';
       console.log('Successfully fetched complete data from Binance');
+      additionalData = {
+        openInterest: oiData.openInterest,
+        openInterestDelta1h: oiData.delta1h,
+        openInterestDelta24h: oiData.delta24h,
+      };
     } else {
       dataSourceMetrics.binance.status = 'unavailable';
       
@@ -362,7 +405,10 @@ export async function GET(request: Request) {
         additionalData = {
           currentPrice: coinGeckoData.currentPrice,
           priceChange24h: coinGeckoData.priceChange24h,
-          volume24h: coinGeckoData.volume24h
+          volume24h: coinGeckoData.volume24h,
+          openInterest: oiData.openInterest,
+          openInterestDelta1h: oiData.delta1h,
+          openInterestDelta24h: oiData.delta24h,
         };
         
         dataSourceMetrics.coingecko.status = 'available';
@@ -378,6 +424,11 @@ export async function GET(request: Request) {
         candles = mockData.candles;
         orderBook = mockData.orderBook;
         trades = mockData.trades;
+        additionalData = {
+          openInterest: oiData.openInterest,
+          openInterestDelta1h: oiData.delta1h,
+          openInterestDelta24h: oiData.delta24h,
+        };
         usedMockData = true;
         dataSource = 'mock';
         dataSourceMetrics.mock.successCount++;
@@ -413,6 +464,7 @@ export async function GET(request: Request) {
     // If everything fails, use mock data as final fallback
     console.error('Error in market data API route, using mock data:', error);
     const mockData = generateMockData(symbol);
+    const oiData = await fetchOpenInterestDeltas(symbol);
     
     return NextResponse.json({
       timestamp: Date.now(),
@@ -423,7 +475,10 @@ export async function GET(request: Request) {
       dataSourceMetrics: {
         primary: 'error',
         fallback: 'error'
-      }
+      },
+      openInterest: oiData.openInterest,
+      openInterestDelta1h: oiData.delta1h,
+      openInterestDelta24h: oiData.delta24h
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30'
