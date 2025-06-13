@@ -225,4 +225,33 @@ Goal: Create an advanced, institutional-grade Bitcoin trading intelligence dashb
 
 ---
 
-Implementation Note: Prioritize tasks based on core functionality and gradually enhance with advanced features. Maintain minimal compute principles by leveraging browser capabilities, efficient data structures, and smart caching strategies.
+## 11 · API-Optimized Decision Support System
+
+11.1 Implement Real-Time Core Market Data with WebSockets
+  • Set up primary WebSocket connection to Binance for 5-minute candles
+  • Add fallback to REST endpoints with prudent polling intervals (max every 5-10 seconds)
+  • Implement local computation for all market indicators to avoid additional API calls
+
+11.2 Create `app/api/social-sentiment/route.ts`
+  • GET → Social sentiment metrics for Bitcoin from LunarCrush API
+  • Include 5-minute cache with revalidation strategy (12 calls/hour, well under 25/hour limit)
+  • Add trend detection between subsequent calls to identify sentiment shifts
+
+11.3 Create `app/api/macro-context/route.ts`
+  • GET → Key macroeconomic indicators from FRED API
+  • Implement 24-hour caching strategy for these slow-changing metrics
+  • Include daily summary insights based on latest values
+
+11.4 Develop Signal Confluence System for 5-Minute Chart
+  • Create signal priority/weighting based on API reliability and data freshness
+  • Implement hysteresis detection to avoid oscillation during consolidation periods
+  • Add API fallback hierarchy for critical signals when primary source is unavailable
+
+11.5 Create `src/hooks/useDecisionSupport.ts`
+  • Combine technical indicators, order book pressure, sentiment and macro context
+  • Calculate aggregated decision confidence score (0-100%) for buy/sell signals
+  • Include divergence detection between price action and underlying metrics
+
+---
+
+Implementation Note: Prioritize tasks based on core functionality and gradually enhance with advanced features. Maintain minimal compute principles by leveraging browser capabilities, efficient data structures, and smart caching strategies. When implementing API calls, always adhere to the rate limits documented in the README.md file.
