@@ -4,13 +4,13 @@ import { Candle, OrderBookData, Trade } from '@/lib/types';
 // Format raw Binance candle data to our app's format
 function formatCandles(rawCandles: any[]): Candle[] {
   return rawCandles.map(candle => ({
-    time: Number(candle[0]),
+    time: Number(candle[0]) / 1000,
     open: Number(candle[1]),
     high: Number(candle[2]),
     low: Number(candle[3]),
     close: Number(candle[4]),
     volume: Number(candle[5]),
-    closeTime: Number(candle[6]),
+    closeTime: Number(candle[6]) / 1000,
     quoteAssetVolume: Number(candle[7]),
     trades: Number(candle[8]),
     takerBuyBaseAssetVolume: Number(candle[9]),
@@ -41,13 +41,13 @@ function formatTrades(rawTrades: any[]): Trade[] {
 
 // Generate mock data when Binance API is unavailable
 function generateMockData(symbol: string) {
-  const now = Date.now();
+  const now = Math.floor(Date.now() / 1000);
   const basePrice = 38000; // For BTCUSDT
   
   // Generate mock candles
   const mockCandles: Candle[] = [];
   for (let i = 99; i >= 0; i--) {
-    const timeOffset = i * 5 * 60 * 1000; // 5 minutes per candle
+    const timeOffset = i * 5 * 60; // 5 minutes per candle (seconds)
     const time = now - timeOffset;
     const volatility = Math.random() * 100 - 50;
     const close = basePrice + volatility;
@@ -62,7 +62,7 @@ function generateMockData(symbol: string) {
       low,
       close,
       volume: Math.random() * 10 + 1,
-      closeTime: time + 5 * 60 * 1000,
+      closeTime: time + 5 * 60,
       quoteAssetVolume: Math.random() * 100000 + 10000,
       trades: Math.floor(Math.random() * 100 + 50),
       takerBuyBaseAssetVolume: Math.random() * 5 + 0.5,
