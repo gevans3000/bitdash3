@@ -355,7 +355,7 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
   • Include 5-minute cache with revalidation strategy (12 calls/hour, well under 25/hour limit)
   • Add trend detection between subsequent calls to identify sentiment shifts
 
-11.3 Create `app/api/macro-context/route.ts`
+11.3 Create `app/api/macro-context/route.ts` — DONE
   • GET → Key macroeconomic indicators from FRED API
   • Implement 24-hour caching strategy for these slow-changing metrics
   • Include daily summary insights based on latest values

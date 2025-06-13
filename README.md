@@ -100,3 +100,33 @@ Binance limits requests to **1200 per minute**. The `/api/candles` route caches 
 | LunarCrush | 25 reqs/hour | Hour | OK: Social sentiment (cache for 5-10 mins) |
 | FMP | 250 reqs/day | Day | LIMITED: One-time data loads (24h cache) |
 | Alpha Vantage | 25 reqs/day | Day | NOT RECOMMENDED: Too limited |
+
+## Macro Context API
+
+The `/api/macro-context` route provides a compact snapshot of key U.S. macroeconomic indicators. Results are cached for 24 hours to minimize requests to the FRED API.
+
+Example:
+
+```bash
+curl http://localhost:3000/api/macro-context
+```
+
+Response
+
+```json
+{
+  "updated": 1710000000000,
+  "data": {
+    "fedFundsRate": { "date": "2024-05-01", "value": 5.25, "change": 0.25, "trend": "up" },
+    "cpi": { "date": "2024-05-01", "value": 300.1, "change": 1.0, "trend": "up" },
+    "unemployment": { "date": "2024-05-01", "value": 3.9, "change": 0.1, "trend": "up" }
+  },
+  "insights": {
+    "fedFunds": "Rates rising",
+    "inflation": "Inflation increasing",
+    "employment": "Job market weakening"
+  }
+}
+```
+
+Use these metrics for additional trading context alongside technical signals.
