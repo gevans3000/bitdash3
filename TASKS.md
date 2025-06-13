@@ -255,3 +255,31 @@ Goal: Create an advanced, institutional-grade Bitcoin trading intelligence dashb
 ---
 
 Implementation Note: Prioritize tasks based on core functionality and gradually enhance with advanced features. Maintain minimal compute principles by leveraging browser capabilities, efficient data structures, and smart caching strategies. When implementing API calls, always adhere to the rate limits documented in the README.md file.
+
+---
+
+## 12 · Data Resilience & Fallback Mechanisms
+
+12.1 Implement Data Source Fallback System
+  • Create a Data Abstraction Layer to manage requests to multiple data providers
+  • Integrate CoinGecko as initial fallback provider when Binance API fails
+  • Implement provider switching logic with appropriate retries and error handling
+  • Add instrumentation to track data source reliability and performance
+
+12.2 Enhance Client-Side (Browser) Caching
+  • Utilize `localStorage` for caching smaller, frequently accessed data points
+  • Implement `IndexedDB` for larger datasets like historical candle data
+  • Add timestamping for all cached data with appropriate TTL logic
+  • Create cache retrieval workflow that prioritizes fresh network data
+
+12.3 Add Data Freshness Indication & Cache Invalidation
+  • Implement UI indicators showing data freshness and source
+  • Create differentiated TTL logic for various data types (prices, daily summaries, etc.)
+  • Add manual refresh option with visual feedback during data fetching
+  • Implement graceful degradation of UI components when data becomes stale
+
+12.4 Enhance WebSocket Connection Handling
+  • Improve `useWebSocket.ts` to retain last received message when disconnected
+  • Add clear UI indication of connection state with auto-reconnect attempts
+  • Implement fallback to REST API polling when WebSocket is persistently unavailable
+  • Add data consistency verification between WebSocket and REST data sources

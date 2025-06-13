@@ -41,8 +41,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   // Track initialization status
   const initialized = useRef(false);
   
-  // Generate signals from candles
-  const signals = useSignals(candles);
+  // Generate signals from candles with memoization to prevent unnecessary rerenders
+  const memoizedCandles = useCallback(() => candles, [candles]);
+  const signals = useSignals({ candles: memoizedCandles() });
   
   // Initialize from localStorage on first render
   useEffect(() => {

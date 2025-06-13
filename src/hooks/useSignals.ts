@@ -2,9 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Candle } from '../lib/types';
 import { generateSignals, Signal, getTopSignal } from '../lib/signals/generator';
 
+/**
+ * Options for the useSignals hook
+ */
 interface UseSignalsOptions {
+  /** Array of candles to generate signals from */
   candles?: Candle[];
+  /** Whether to automatically refresh signals */
   autoRefresh?: boolean;
+  /** Interval in milliseconds between automatic refreshes */
   refreshInterval?: number;
 }
 
@@ -17,6 +23,17 @@ interface SignalsState {
 
 /**
  * React hook for accessing trading signals
+ *
+ * @param options - Configuration options object containing candles data and refresh settings
+ * @returns Signal state and utility functions for managing signals
+ *
+ * @example
+ * // Basic usage
+ * const { signals, topSignal } = useSignals({ candles });
+ *
+ * @example
+ * // With auto-refresh disabled
+ * const { signals, refreshSignals } = useSignals({ candles, autoRefresh: false });
  */
 export function useSignals({
   candles = [],
@@ -35,6 +52,9 @@ export function useSignals({
   
   // Generate signals when candles update
   useEffect(() => {
+    // Log debug info for tracking re-renders
+    console.debug('useSignals effect running with candles:', 
+      candles ? `${candles.length} items` : 'null');
     // Additional safety checks for candles array
     if (!candles || !Array.isArray(candles) || candles.length < 50) {
       setState(prev => ({
