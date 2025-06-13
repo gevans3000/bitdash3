@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Candle, OrderBookData, Trade } from '@/lib/types';
 import SignalsDisplay from './SignalsDisplay';
+import OnChainInsightsPanel from './OnChainInsightsPanel';
 import { useSignals } from '@/hooks/useSignals';
 import { browserCache, withCache } from '@/lib/cache/browserCache';
 import DataFreshnessIndicator from './DataFreshnessIndicator';
@@ -199,6 +200,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
           className="hover:bg-white/5 px-2 py-1 rounded-md cursor-pointer transition-colors"
         />
       </div>
+
+      {/* On-Chain Insights */}
+      <OnChainInsightsPanel />
       
       {/* Price Overview and Signals */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
