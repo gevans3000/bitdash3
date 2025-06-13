@@ -431,7 +431,7 @@ Goal: Create a minimalist, high-performance decision support system optimized fo
   • Add visual indicators for unusual network activity
   • Include togglable detail view for in-depth analysis
 
-13.3 Add Open Interest Delta calculation
+13.3 Add Open Interest Delta calculation — DONE
   • Extend market data endpoints to include derivatives open interest data
   • Implement delta calculation with configurable time windows (1h, 24h)
   • Add visualization to highlight significant OI changes

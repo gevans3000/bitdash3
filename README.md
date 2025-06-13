@@ -130,3 +130,25 @@ Response
 ```
 
 Use these metrics for additional trading context alongside technical signals.
+
+## Market Data API
+
+The `/api/market-data` endpoint aggregates recent candles, order book data, and derivatives open interest. It also reports the percentage change in open interest over the last hour and day.
+
+Example:
+
+```bash
+curl http://localhost:3000/api/market-data
+```
+
+Response snippet:
+
+```json
+{
+  "openInterest": 123456789,
+  "openInterestDelta1h": 0.5,
+  "openInterestDelta24h": -2.1
+}
+```
+
+Use these deltas to monitor shifts in futures positioning.
