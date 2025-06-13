@@ -1,12 +1,12 @@
-import type { Candle } from './types';
+import type { Candle, TimeFrame } from './types';
 
-export async function getBinanceCandles(limit = 100): Promise<Candle[]> {
+export async function getBinanceCandles(timeFrame: TimeFrame = '5m', limit = 100): Promise<Candle[]> {
   const base =
     (process.env.BINANCE_BASE_URL ?? 'https://api.binance.com/api/v3').replace(
       /\/$/,
       ''
     );
-  const url = `${base}/klines?symbol=BTCUSDT&interval=5m&limit=${limit}`;
+  const url = `${base}/klines?symbol=BTCUSDT&interval=${timeFrame}&limit=${limit}`;
   const res = await fetch(url);
 
   // Only log headers in development mode
