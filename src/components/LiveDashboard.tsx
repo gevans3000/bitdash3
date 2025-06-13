@@ -8,6 +8,9 @@ import { useSignals } from '@/hooks/useSignals';
 import { browserCache, withCache } from '@/lib/cache/browserCache';
 import DataFreshnessIndicator from './DataFreshnessIndicator';
 import OpenInterestCard from './OpenInterestCard';
+import BacktestConfigPanel from './BacktestConfigPanel';
+import BacktestResultsPanel from './BacktestResultsPanel';
+import { runBacktest, BacktestResult } from '@/lib/backtesting/engine';
 
 interface LiveDashboardProps {
   refreshTrigger?: number;
@@ -21,6 +24,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   const [openInterest, setOpenInterest] = useState<number | null>(null);
   const [oiDelta1h, setOiDelta1h] = useState<number | null>(null);
   const [oiDelta24h, setOiDelta24h] = useState<number | null>(null);
+
+  const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   
   // Data source and freshness tracking
   const [dataSource, setDataSource] = useState<string>('cached');
@@ -165,9 +170,15 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   const displayCandles = candles.length > 0 ? candles : [];
   
   // Show latest price from candles
-  const latestPrice = displayCandles.length > 0 
+  const latestPrice = displayCandles.length > 0
     ? displayCandles[displayCandles.length - 1].close
     : null;
+
+  const handleBacktest = (opts: { candles: Candle[]; preset: string }) => {
+    if (opts.candles.length === 0) return;
+    const result = runBacktest({ candles: opts.candles });
+    setBacktestResult(result);
+  };
   
   // Get latest trade data
   const latestTrade = trades.length > 0 ? trades[0] : null;
@@ -380,6 +391,11 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
         ) : (
           <div className="text-white/50 text-center py-4">No candle data available</div>
         )}
+      </div>
+      {/* Backtesting */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BacktestConfigPanel candles={displayCandles} onRun={handleBacktest} />
+        <BacktestResultsPanel result={backtestResult} />
       </div>
     </div>
   );
