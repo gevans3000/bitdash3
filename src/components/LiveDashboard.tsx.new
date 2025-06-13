@@ -146,11 +146,12 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
     }
   };
   
-  // Refresh data when refresh trigger changes
+  // Refresh data when refresh button is clicked
   useEffect(() => {
-    if (refreshTrigger > 0) {
-      fetchMarketData();
-    }
+    if (refreshTrigger === 0) return;
+    
+    // Fetch fresh data from API endpoint
+    fetchMarketData();
   }, [refreshTrigger]);
   
   // Ensure we always have a valid array for candles, even if empty
@@ -367,22 +368,15 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   );
 }
 
-// Helper component for status indicators
-function StatusCard({ title, status, count }: { title: string; status: string; count?: number }) {
+// Helper component for connection status
+function StatusCard({ title, status, count }: { title: string, status: string, count?: number }) {
   const getStatusColor = () => {
-    switch (status) {
-      case 'live':
-        return 'bg-green-500';
-      case 'cached':
-        return 'bg-blue-500';
-      case 'fallback':
-        return 'bg-yellow-500';
-      case 'mock':
-        return 'bg-red-500';
-      case 'error':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+    switch(status) {
+      case 'connected': return 'bg-green-500';
+      case 'connecting': return 'bg-yellow-500';
+      case 'disconnected': return 'bg-neutral-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-neutral-500';
     }
   };
   

@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { Candle, OrderBookData, Trade } from '@/lib/types';
 
+// Data source types for tracking and metrics
+type DataSource = 'binance' | 'coingecko' | 'mock';
+
+interface DataSourceMetrics {
+  name: DataSource;
+  status: 'available' | 'unavailable' | 'rate-limited' | 'error';
+  lastChecked: number;
+  errorCount: number;
+  successCount: number;
+}
+
 // Format raw Binance candle data to our app's format
 function formatCandles(rawCandles: any[]): Candle[] {
   return rawCandles.map(candle => ({
@@ -39,7 +50,132 @@ function formatTrades(rawTrades: any[]): Trade[] {
   }));
 }
 
-// Generate mock data when Binance API is unavailable
+// Fetch data from CoinGecko as a fallback when Binance API is unavailable
+async function fetchCoinGeckoData(symbol = 'BTCUSDT'): Promise<any> {
+  console.log('Attempting to fetch data from CoinGecko...');
+  
+  // Parse symbol to match CoinGecko's expected format
+  const cryptoId = symbol.toLowerCase().includes('btc') ? 'bitcoin' : 
+                   symbol.toLowerCase().includes('eth') ? 'ethereum' : 'bitcoin';
+                   
+  try {
+    // Fetch current price and market data
+    const priceResponse = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true&precision=full`,
+      { next: { revalidate: 60 } }
+    );
+    
+    if (!priceResponse.ok) {
+      throw new Error(`CoinGecko price API returned ${priceResponse.status}`);
+    }
+    
+    const priceData = await priceResponse.json();
+    
+    // Fetch historical data for candles (hourly data for the past 3 days)
+    const marketChartResponse = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=3&interval=hourly`,
+      { next: { revalidate: 3600 } }
+    );
+    
+    if (!marketChartResponse.ok) {
+      throw new Error(`CoinGecko market chart API returned ${marketChartResponse.status}`);
+    }
+    
+    const marketChartData = await marketChartResponse.json();
+    
+    // Convert to our app's format
+    const currentPrice = priceData[cryptoId].usd;
+    const volume24h = priceData[cryptoId].usd_24h_vol;
+    const priceChange24h = priceData[cryptoId].usd_24h_change;
+    const lastUpdated = priceData[cryptoId].last_updated_at;
+    
+    // Convert CoinGecko price data to candle format
+    const prices = marketChartData.prices;
+    const volumes = marketChartData.total_volumes;
+    
+    const candles: Candle[] = [];
+    for (let i = 0; i < prices.length; i++) {
+      const timestamp = prices[i][0] / 1000; // Convert to seconds
+      const price = prices[i][1];
+      
+      // For realistic OHLC, use nearby prices to estimate
+      const priceVariation = price * 0.005; // 0.5% variation for high/low
+      
+      candles.push({
+        time: timestamp,
+        open: price,
+        high: price + priceVariation,
+        low: price - priceVariation,
+        close: price,
+        volume: volumes[i] ? volumes[i][1] : 0,
+        closeTime: timestamp + 3600, // 1 hour later
+        quoteAssetVolume: volumes[i] ? volumes[i][1] : 0,
+        trades: 100, // Default value
+        takerBuyBaseAssetVolume: 0,
+        takerBuyQuoteAssetVolume: 0
+      });
+    }
+    
+    // Generate order book based on current price
+    const orderBook: OrderBookData = {
+      lastUpdateId: Date.now(),
+      bids: [],
+      asks: []
+    };
+    
+    // Add some realistic order book depth
+    for (let i = 0; i < 20; i++) {
+      orderBook.bids.push([
+        currentPrice * (1 - 0.0001 * (i + 1) * (i + 1)),
+        (5 / (i + 1)) + (Math.random() * 2)
+      ]);
+      
+      orderBook.asks.push([
+        currentPrice * (1 + 0.0001 * (i + 1) * (i + 1)),
+        (5 / (i + 1)) + (Math.random() * 2)
+      ]);
+    }
+    
+    // Create trades based on recent price data
+    const trades: Trade[] = [];
+    const recentPrices = prices.slice(-20);
+    
+    for (let i = 0; i < recentPrices.length; i++) {
+      const time = recentPrices[i][0];
+      const price = recentPrices[i][1];
+      const isBuyerMaker = i % 2 === 0;
+      
+      trades.push({
+        id: `cg-${Date.now()}-${i}`,
+        price,
+        qty: 0.05 + (Math.random() * 0.5),
+        time,
+        isBuyerMaker,
+        isBestMatch: true
+      });
+    }
+    
+    // Sort trades by time (newest first)
+    trades.sort((a, b) => b.time - a.time);
+    
+    console.log('Successfully fetched data from CoinGecko');
+    return {
+      candles,
+      orderBook,
+      trades,
+      dataSource: 'coingecko',
+      currentPrice,
+      priceChange24h,
+      volume24h,
+      lastUpdated
+    };
+  } catch (error) {
+    console.error('CoinGecko API error:', error);
+    throw error;
+  }
+}
+
+// Generate mock data when all external APIs are unavailable
 function generateMockData(symbol: string) {
   const now = Math.floor(Date.now() / 1000);
   const basePrice = 38000; // For BTCUSDT
@@ -123,69 +259,129 @@ export async function GET(request: Request) {
   const symbol = url.searchParams.get('symbol') || 'BTCUSDT';
   const interval = url.searchParams.get('interval') || '5m';
   
+  // Track data sources and their status
+  const dataSourceMetrics: Record<DataSource, DataSourceMetrics> = {
+    binance: { name: 'binance', status: 'unavailable', lastChecked: 0, errorCount: 0, successCount: 0 },
+    coingecko: { name: 'coingecko', status: 'unavailable', lastChecked: 0, errorCount: 0, successCount: 0 },
+    mock: { name: 'mock', status: 'available', lastChecked: 0, errorCount: 0, successCount: 0 }
+  };
+  
   try {
     // Try to fetch data from Binance API
     let candles: Candle[] = [];
     let orderBook: OrderBookData | null = null;
     let trades: Trade[] = [];
+    let dataSource: DataSource = 'binance'; // Default source
+    let usedFallbackApi = false;
     let usedMockData = false;
+    let additionalData: Record<string, any> = {};
+    
+    // 1. ATTEMPT BINANCE API
+    dataSourceMetrics.binance.lastChecked = Date.now();
     
     try {
-      // Fetch candles data (candles don't change frequently, cache for 1 minute)
+      // Fetch candles data with appropriate cache time
       const candlesRes = await fetch(
         `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`,
-        { next: { revalidate: 60 } }
+        { next: { revalidate: interval === '1m' ? 30 : 60 } }
       );
       
-      if (candlesRes.ok) {
-        const candlesData = await candlesRes.json();
-        candles = formatCandles(candlesData);
+      if (!candlesRes.ok) {
+        throw new Error(`Binance candles API returned ${candlesRes.status}`);
       }
+      
+      const candlesData = await candlesRes.json();
+      candles = formatCandles(candlesData);
+      dataSourceMetrics.binance.successCount++;
     } catch (candleErr) {
-      console.warn('Failed to fetch candles:', candleErr);
-      // Will fallback to mock data if all API calls fail
+      console.warn('Failed to fetch candles from Binance:', candleErr);
+      dataSourceMetrics.binance.errorCount++;
+      dataSourceMetrics.binance.status = 'error';
     }
     
-    try {
-      // Fetch order book (changes rapidly, minimal cache)
-      const orderBookRes = await fetch(
-        `https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=20`,
-        { next: { revalidate: 5 } }
-      );
-      
-      if (orderBookRes.ok) {
+    // Only continue with Binance if candles were successful
+    if (candles.length > 0) {
+      try {
+        // Fetch order book (changes rapidly, minimal cache)
+        const orderBookRes = await fetch(
+          `https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=20`,
+          { next: { revalidate: 5 } }
+        );
+        
+        if (!orderBookRes.ok) {
+          throw new Error(`Binance orderbook API returned ${orderBookRes.status}`);
+        }
+        
         const orderBookData = await orderBookRes.json();
         orderBook = formatOrderBook(orderBookData);
+        dataSourceMetrics.binance.successCount++;
+      } catch (orderBookErr) {
+        console.warn('Failed to fetch order book from Binance:', orderBookErr);
+        dataSourceMetrics.binance.errorCount++;
       }
-    } catch (orderBookErr) {
-      console.warn('Failed to fetch order book:', orderBookErr);
-      // Will fallback to mock data if all API calls fail
-    }
-    
-    try {
-      // Fetch recent trades (also changes rapidly, minimal cache)
-      const tradesRes = await fetch(
-        `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=20`,
-        { next: { revalidate: 10 } }
-      );
       
-      if (tradesRes.ok) {
+      try {
+        // Fetch recent trades
+        const tradesRes = await fetch(
+          `https://api.binance.com/api/v3/trades?symbol=${symbol}&limit=20`,
+          { next: { revalidate: 10 } }
+        );
+        
+        if (!tradesRes.ok) {
+          throw new Error(`Binance trades API returned ${tradesRes.status}`);
+        }
+        
         const tradesData = await tradesRes.json();
         trades = formatTrades(tradesData);
+        dataSourceMetrics.binance.successCount++;
+      } catch (tradesErr) {
+        console.warn('Failed to fetch trades from Binance:', tradesErr);
+        dataSourceMetrics.binance.errorCount++;
       }
-    } catch (tradesErr) {
-      console.warn('Failed to fetch trades:', tradesErr);
-      // Will fallback to mock data if all API calls fail
     }
     
-    // If any data is missing, use mock data for all to ensure consistency
-    if (candles.length === 0 || !orderBook || trades.length === 0) {
-      console.log('Using mock data for market data');
-      const mockData = generateMockData(symbol);
-      candles = mockData.candles;
-      orderBook = mockData.orderBook;
-      trades = mockData.trades;
-      usedMockData = true;
+    // Check if Binance data is complete
+    if (candles.length > 0 && orderBook && trades.length > 0) {
+      dataSourceMetrics.binance.status = 'available';
+      console.log('Successfully fetched complete data from Binance');
+    } else {
+      dataSourceMetrics.binance.status = 'unavailable';
+      
+      // 2. ATTEMPT COINGECKO FALLBACK
+      dataSourceMetrics.coingecko.lastChecked = Date.now();
+      
+      try {
+        console.log('Binance data incomplete, trying CoinGecko fallback...');
+        const coinGeckoData = await fetchCoinGeckoData(symbol);
+        
+        candles = coinGeckoData.candles;
+        orderBook = coinGeckoData.orderBook;
+        trades = coinGeckoData.trades;
+        usedFallbackApi = true;
+        dataSource = 'coingecko';
+        additionalData = {
+          currentPrice: coinGeckoData.currentPrice,
+          priceChange24h: coinGeckoData.priceChange24h,
+          volume24h: coinGeckoData.volume24h
+        };
+        
+        dataSourceMetrics.coingecko.status = 'available';
+        dataSourceMetrics.coingecko.successCount++;
+      } catch (coingeckoErr) {
+        console.warn('Failed to fetch data from CoinGecko:', coingeckoErr);
+        dataSourceMetrics.coingecko.status = 'error';
+        dataSourceMetrics.coingecko.errorCount++;
+        
+        // 3. FALLBACK TO MOCK DATA AS LAST RESORT
+        console.log('All APIs failed, using mock data as last resort');
+        const mockData = generateMockData(symbol);
+        candles = mockData.candles;
+        orderBook = mockData.orderBook;
+        trades = mockData.trades;
+        usedMockData = true;
+        dataSource = 'mock';
+        dataSourceMetrics.mock.successCount++;
+      }
     }
     
     // Format and return all data
@@ -194,12 +390,23 @@ export async function GET(request: Request) {
       candles,
       orderBook,
       trades,
-      usedMockData
+      dataSource,
+      usedMockData,
+      usedFallbackApi,
+      dataSourceMetrics: {
+        primary: dataSourceMetrics.binance.status,
+        fallback: dataSourceMetrics.coingecko.status
+      },
+      ...additionalData
     };
     
+    // Set appropriate cache headers based on data source
+    const cacheMaxAge = dataSource === 'binance' ? 10 : 
+                       dataSource === 'coingecko' ? 30 : 5;
+                      
     return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+        'Cache-Control': `public, s-maxage=${cacheMaxAge}, stale-while-revalidate=${cacheMaxAge * 6}`
       }
     });
   } catch (error) {
@@ -210,10 +417,16 @@ export async function GET(request: Request) {
     return NextResponse.json({
       timestamp: Date.now(),
       ...mockData,
-      usedMockData: true
+      dataSource: 'mock' as DataSource,
+      usedMockData: true,
+      usedFallbackApi: false,
+      dataSourceMetrics: {
+        primary: 'error',
+        fallback: 'error'
+      }
     }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30'
       }
     });
   }

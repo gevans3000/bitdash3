@@ -1,12 +1,34 @@
 # Bitdash Lite
 
-Minimal Bitcoin BUY decision dashboard.
+Minimal Bitcoin BUY decision dashboard with low compute and code.
 
 ## Setup
 
 ```bash
 npm install
 npm run dev
+```
+
+## Application Management
+
+### Automatic Shutdown
+
+The server automatically shuts down when you close the browser tab or window (development mode only). This prevents orphaned Node.js processes.
+
+### Manual Termination
+
+If you need to manually terminate all Node.js instances:
+
+#### Windows
+```powershell
+# Kill all Node.js processes
+taskkill /F /IM node.exe
+```
+
+#### Mac/Linux
+```bash
+# Kill all Node.js processes
+pkill -f node
 ```
 
 ## Tests

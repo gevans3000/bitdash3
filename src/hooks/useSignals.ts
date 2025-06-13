@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Candle } from '../lib/types';
 import { generateSignals, Signal, getTopSignal } from '../lib/signals/generator';
 
@@ -50,20 +50,47 @@ export function useSignals({
   const signalsHistory = useRef<Signal[]>([]);
   const signalsRef = useRef<Signal[]>([]);
   
+  // Use a ref to track previous candles length to prevent unnecessary re-calculation
+  const prevCandlesLengthRef = useRef<number>(0);
+  const prevCandlesTimestampRef = useRef<number | null>(null);
+  
+  // Memoized function to check if candles have actually changed significantly
+  const haveCandlesChanged = useCallback(() => {
+    if (!candles || !Array.isArray(candles)) return false;
+    
+    // Different length - definitely changed
+    if (prevCandlesLengthRef.current !== candles.length) {
+      prevCandlesLengthRef.current = candles.length;
+      return true;
+    }
+    
+    // Check the timestamp of the last candle to detect data updates
+    if (candles.length > 0) {
+      const lastCandle = candles[candles.length - 1];
+      const lastTimestamp = typeof lastCandle.time === 'number' ? lastCandle.time : null;
+      
+      if (lastTimestamp !== prevCandlesTimestampRef.current) {
+        prevCandlesTimestampRef.current = lastTimestamp;
+        return true;
+      }
+    }
+    
+    return false;
+  }, [candles]);
+  
   // Generate signals when candles update
   useEffect(() => {
-    // Log debug info for tracking re-renders
-    console.debug('useSignals effect running with candles:', 
-      candles ? `${candles.length} items` : 'null');
-    // Additional safety checks for candles array
+    // Skip the effect if candles haven't meaningfully changed
+    if (!haveCandlesChanged()) return;
+    
+    // Safety checks for candles array
     if (!candles || !Array.isArray(candles) || candles.length < 50) {
-      setState(prev => ({
-        ...prev,
+      setState({
         signals: [],
         topSignal: null,
         isLoading: false,
         lastUpdated: Date.now()
-      }));
+      });
       return;
     }
     
@@ -130,6 +157,11 @@ export function useSignals({
     
     const intervalId = setInterval(() => {
       try {
+        // Don't regenerate signals if candles haven't changed
+        if (!haveCandlesChanged()) {
+          return;
+        }
+        
         const newSignals = generateSignals(candles);
         const top = getTopSignal(newSignals);
         
@@ -157,7 +189,7 @@ export function useSignals({
     }, refreshInterval);
     
     return () => clearInterval(intervalId);
-  }, [autoRefresh, refreshInterval, candles]);
+  }, [autoRefresh, refreshInterval, candles, haveCandlesChanged]);
   
   // Force refresh the signals
   const refreshSignals = () => {
