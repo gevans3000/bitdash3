@@ -42,10 +42,16 @@ function useAutoRefresh<T>(fetcher: () => Promise<T>, interval = 15_000) {
 async function fetchCandles() {
   try {
     const res = await fetch('/api/candles');
-    if (!res.ok) throw new Error('api error');
+    if (!res.ok) {
+      const err = new Error('api error') as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
     return (await res.json()) as Candle[];
-  } catch {
-    throw new Error('Data unavailable \u2014 retrying');
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status;
+    const statusMsg = status ? ` (status ${status})` : '';
+    throw new Error(`Data unavailable \u2014 retrying${statusMsg}`);
   }
 }
 
