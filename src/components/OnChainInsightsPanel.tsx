@@ -53,22 +53,22 @@ export default function OnChainInsightsPanel() {
       ) : data ? (
         <>
           <div className="space-y-1 text-sm">
-            <div className={`flex justify-between ${isAlert(data.tx_count, 350000) ? 'text-yellow-300' : ''}`}> 
+            <div className={`flex justify-between ${isAlert(data.tx_count || 0, 350000) ? 'text-yellow-300' : ''}`}> 
               <span>Transactions</span>
-              <span>{data.tx_count.toLocaleString()}</span>
+              <span>{(data.tx_count || 0).toLocaleString()}</span>
             </div>
-            <div className={`flex justify-between ${isAlert(data.mempool_transactions, 100000) ? 'text-yellow-300' : ''}`}> 
+            <div className={`flex justify-between ${isAlert(data.mempool_transactions || 0, 100000) ? 'text-yellow-300' : ''}`}> 
               <span>Mempool</span>
-              <span>{data.mempool_transactions.toLocaleString()}</span>
+              <span>{(data.mempool_transactions || 0).toLocaleString()}</span>
             </div>
-            <div className={`flex justify-between ${isAlert(data.total_fees_btc, 100) ? 'text-yellow-300' : ''}`}> 
+            <div className={`flex justify-between ${isAlert(data.total_fees_btc || 0, 100) ? 'text-yellow-300' : ''}`}> 
               <span>Total Fees (BTC)</span>
-              <span>{data.total_fees_btc.toFixed(2)}</span>
+              <span>{(data.total_fees_btc || 0).toFixed(2)}</span>
             </div>
           </div>
           {expanded && (
             <div className="mt-2 text-xs text-white/70">
-              Last updated: {new Date(data.timestamp).toLocaleString()}
+              Last updated: {new Date(data.timestamp || Date.now()).toLocaleString()}
             </div>
           )}
         </>
