@@ -13,6 +13,7 @@ import OpenInterestCard from './OpenInterestCard';
 import BacktestConfigPanel from './BacktestConfigPanel';
 import BacktestResultsPanel from './BacktestResultsPanel';
 import { runBacktest, BacktestResult } from '@/lib/backtesting/engine';
+import QuickActionPanel from './QuickActionPanel';
 
 interface LiveDashboardProps {
   refreshTrigger?: number;
@@ -398,6 +399,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
         <BacktestConfigPanel candles={displayCandles} onRun={handleBacktest} />
         <BacktestResultsPanel result={backtestResult} />
       </div>
+
+      {/* Quick Actions */}
+      <QuickActionPanel latestPrice={latestPrice || 0} className="mt-4" />
     </div>
   );
 }
