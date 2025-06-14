@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { calculatePositionSize } from '@/lib/calculators/price-targets';
-import { performanceTracker } from '@/lib/tracking/signal-performance';
-import { loadTrades, saveTrades } from '@/lib/storage/trade-history';
+import { executeMockBuy, executeMockSell } from '@/lib/trading/quick-trades';
 import { cn } from '@/lib/utils';
 import { DataCard } from './DataCard';
 
@@ -48,40 +47,13 @@ export default function QuickActionPanel({ latestPrice = 0, className = '' }: Qu
   const lossAtStop = useMemo(() => (entry - stop) * positionSize, [entry, stop, positionSize]);
 
   const executeBuy = () => {
-    const id = `trade-${Date.now()}`;
-    performanceTracker.recordEntry({
-      id,
-      entrySignalId: 'manual-buy',
-      entryPrice: entry,
-      entryTime: Date.now(),
-      positionSize,
-      metadata: { entryReason: 'Quick Action BUY' },
-    });
-    const trades = loadTrades();
-    trades.push({
-      id,
-      entrySignalId: 'manual-buy',
-      entryPrice: entry,
-      entryTime: Date.now(),
-      positionSize,
-      status: 'open',
-    });
-    saveTrades(trades);
+    const id = executeMockBuy({ price: entry, positionSize });
     setOpenTradeId(id);
   };
 
   const executeSell = () => {
     if (!openTradeId) return;
-    performanceTracker.recordExit(openTradeId, entry, Date.now(), 'Quick Action SELL');
-    const trades = loadTrades().map(t => {
-      if (t.id === openTradeId && t.status === 'open') {
-        const pnlPercent = ((entry - t.entryPrice) / t.entryPrice) * 100;
-        const pnlAbsolute = (entry - t.entryPrice) * t.positionSize;
-        return { ...t, exitPrice: entry, exitTime: Date.now(), pnlPercent, pnlAbsolute, status: 'closed' };
-      }
-      return t;
-    });
-    saveTrades(trades);
+    executeMockSell(openTradeId, entry);
     setOpenTradeId(null);
   };
 

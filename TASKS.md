@@ -390,7 +390,7 @@ Mark each task as complete only when ALL criteria are met:
 - [x] **Task 8:** Performance Tracking (Completed: Win rate, P&L, and trade metrics)
 - [x] MarketRegimeDetector unit tests implemented
 - [x] DataFreshnessIndicator unit tests implemented
-- [x] **Task 9:** Quick Action Panel (Completed: Buy/Sell, alerts, position sizing, export)
+- [x] **Task 9:** Quick Action Panel (Completed: Quick-trades helper, Buy/Sell, alerts, position sizing, export)
 - [x] **Task 10:** Data Freshness & Reliability
 
 
