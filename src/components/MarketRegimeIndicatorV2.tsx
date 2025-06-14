@@ -1,68 +1,68 @@
 import React from 'react';
 import { useMarketData } from '@/hooks/useMarketData';
-import { formatDuration } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { MarketRegime } from '@/lib/market/regime-detector';
 
 interface MarketRegimeIndicatorProps {
   symbol?: string;
   interval?: string;
   className?: string;
+  showDetails?: boolean;
 }
 
 export const MarketRegimeIndicator: React.FC<MarketRegimeIndicatorProps> = ({
   symbol = 'BTCUSDT',
   interval = '5m',
   className = '',
+  showDetails = true,
 }) => {
   const {
-    regime,
-    adx,
-    plusDI,
-    minusDI,
-    regimeDuration,
-    isConnected,
-    lastUpdate,
+    regime = 'ranging',
+    adx = 0,
+    plusDI = 0,
+    minusDI = 0,
+    rsi = null,
+    volumeRatio = 1,
+    emaSlope = 0,
+    confidence = 0,
+    regimeDuration = 0,
+    isConnected = false,
+    lastUpdate = null,
   } = useMarketData({ symbol, interval });
 
   // Format the regime display name
-  const getRegimeDisplayName = () => {
-    switch (regime) {
-      case 'strong-trend':
-        return 'Strong Trend';
-      case 'weak-trend':
-        return 'Weak Trend';
+  const getRegimeDisplayName = (regimeType: MarketRegime) => {
+    switch (regimeType) {
+      case 'strong-trend-up':
+        return 'Strong Uptrend';
+      case 'strong-trend-down':
+        return 'Strong Downtrend';
+      case 'weak-trend-up':
+        return 'Weak Uptrend';
+      case 'weak-trend-down':
+        return 'Weak Downtrend';
       case 'ranging':
         return 'Ranging';
       default:
-        return 'Loading...';
+        return 'Analyzing...';
     }
   };
 
   // Get color based on regime
-  const getRegimeColor = () => {
-    switch (regime) {
-      case 'strong-trend':
-        return plusDI > minusDI ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-      case 'weak-trend':
-        return plusDI > minusDI ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600';
+  const getRegimeColor = (regimeType: MarketRegime) => {
+    switch (regimeType) {
+      case 'strong-trend-up':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'strong-trend-down':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'weak-trend-up':
+        return 'bg-green-50 text-green-600 border-green-100';
+      case 'weak-trend-down':
+        return 'bg-red-50 text-red-600 border-red-100';
       case 'ranging':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Format the duration
-  const formatDurationString = (ms: number) => {
-    try {
-      return formatDuration(
-        {
-          hours: Math.floor(ms / (1000 * 60 * 60)),
-          minutes: Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60)),
-        },
-        { zero: false, delimiter: ' ' }
-      );
-    } catch (e) {
-      return '--';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -70,6 +70,27 @@ export const MarketRegimeIndicator: React.FC<MarketRegimeIndicatorProps> = ({
   const getTrendDirection = (regimeType: MarketRegime) => {
     if (regimeType === 'ranging') return '↔️';
     return regimeType.endsWith('up') ? '⬆️' : '⬇️';
+  };
+
+  // Format the duration
+  const formatDurationString = (ms: number) => {
+    try {
+      return formatDistanceToNow(Date.now() - ms, { addSuffix: false });
+    } catch (e) {
+      return '--';
+    }
+  };
+  
+  // Get confidence color
+  const getConfidenceColor = (level: number) => {
+    if (level > 75) return 'text-green-600';
+    if (level > 50) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+  
+  // Format number with sign
+  const formatWithSign = (num: number) => {
+    return `${num > 0 ? '+' : ''}${num.toFixed(2)}%`;
   };
 
   return (
@@ -152,5 +173,8 @@ export const MarketRegimeIndicator: React.FC<MarketRegimeIndicatorProps> = ({
           </span>
         </div>
       </div>
+    </div>
   );
 };
+
+export default MarketRegimeIndicator;

@@ -271,7 +271,8 @@ export function useMarketData({
     };
   }, []);
 
-  return {
+  // Memoize the state to prevent unnecessary re-renders
+  const memoizedState = useMemo(() => ({
     ...state,
     // Add some helper methods
     isBullish: state.plusDI > state.minusDI,
@@ -279,8 +280,25 @@ export function useMarketData({
     isStrongTrend: state.regime === 'strong-trend',
     isWeakTrend: state.regime === 'weak-trend',
     isRanging: state.regime === 'ranging',
-  };
-}
+  }), [
+    state.candles, 
+    state.currentPrice, 
+    state.volume, 
+    state.regime, 
+    state.adx, 
+    state.plusDI, 
+    state.minusDI,
+    state.rsi,
+    state.volumeRatio,
+    state.emaSlope,
+    state.confidence,
+    state.regimeDuration,
+    state.isConnected,
+    state.lastUpdate,
+    state.lastCandle
+  ]);
+
+  return memoizedState;
 
 // Cached version of the hook
 export const useCachedMarketData = withCache(useMarketData, {
