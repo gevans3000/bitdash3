@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Candle, OrderBookData, Trade } from '@/lib/types';
-import SignalsDisplay from './SignalsDisplay';
+import { TradingSignalPanel } from './TradingSignalPanel';
 import OnChainInsightsPanel from './OnChainInsightsPanel';
 import { useSignals } from '@/hooks/useSignals';
 import { browserCache, withCache } from '@/lib/cache/browserCache';
@@ -190,6 +190,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   
   return (
     <div className="space-y-8">
+      {/* Trading Signal Panel */}
+      <TradingSignalPanel className="mb-6" />
+      
       {/* Data Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-6">
         <StatusCard 
@@ -229,8 +232,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
         />
       </div>
       
-      {/* Price Overview and Signals */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Price Overview */}
+      <div className="grid grid-cols-1 gap-4">
         {/* Price Card */}
         <div className="bg-white/5 rounded-xl p-6">
           <h2 className="text-xl font-medium mb-4">Current Price</h2>
@@ -252,12 +255,6 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
           ) : (
             <div className="text-white/50">No price data available</div>
           )}
-        </div>
-        
-        {/* Signals Card */}
-        <div className="bg-white/5 rounded-xl p-6">
-          <h2 className="text-xl font-medium mb-4">Trading Signals</h2>
-          <SignalsDisplay signals={signals} />
         </div>
       </div>
       
