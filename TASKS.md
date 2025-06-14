@@ -1,7 +1,7 @@
 # TASKS — Bitcoin 5-Minute Trading System
 
 Goal: Create a minimalist, high-performance decision support system optimized for Bitcoin trading on the 5-minute timeframe with **minimal code & compute** — using Next.js, React, and TypeScript without additional infrastructure.
-Note: Tasks can be referenced by their numbers. Up to three tasks may be worked on simultaneously.
+Note: Tasks can be referenced by their numbers. Up 1 or more tasks can be worked on at a time based on user preference.
 
 ---
 
