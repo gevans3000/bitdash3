@@ -388,6 +388,7 @@ Mark each task as complete only when ALL criteria are met:
 - [x] **Task 6:** Market Regime Detection (Completed: Regime classification with confidence scoring)
 - [x] **Task 7:** Real-Time Alert System (Completed: Browser notifications with sound alerts)
 - [x] **Task 8:** Performance Tracking (Completed: Win rate, P&L, and trade metrics)
+- [x] MarketRegimeDetector unit tests implemented
 - [ ] **Task 9:** Quick Action Panel
 - [ ] **Task 10:** Data Freshness & Reliability
 
