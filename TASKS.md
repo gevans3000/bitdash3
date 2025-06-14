@@ -2,7 +2,7 @@
 
 **Mission:** Help users identify 2-3 profitable Bitcoin trading opportunities daily from 5-minute chart analysis
 
-**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits
+**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits, make ure to use low code and minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe 
 
 ---
 
@@ -197,6 +197,46 @@ Complete tasks in order. Each task builds on the previous one. Test after every 
 - **Alert Management:** Mark as read, dismiss, and clear functionality
 - **Responsive Design:** Works on all device sizes
 - **Customizable Settings:** Toggle sounds, set minimum confidence levels
+
+---
+
+### **TASK 8: Performance Tracking** (60 min)
+**Goal:** Track and display the performance of trading signals
+
+**Files to create/edit:**
+- `src/lib/tracking/signal-performance.ts` (create)
+- `src/components/PerformanceMetrics.tsx` (create)
+- `src/lib/storage/trade-history.ts` (create)
+
+**What to build:**
+1. **Signal Performance Tracking:**
+   - Record entry/exit prices for each signal
+   - Calculate win/loss statistics
+   - Track profit/loss in percentage and absolute terms
+   
+2. **Performance Metrics:**
+   - Win rate percentage
+   - Average win/loss ratio
+   - Total profit/loss
+   - Maximum drawdown
+   - Risk-adjusted returns
+
+3. **Visual Dashboard:**
+   - Clean, at-a-glance metrics display
+   - Performance charts over time
+   - Trade history with filtering options
+   - Export functionality for analysis
+
+**Testing:**
+- Verify accurate calculation of all metrics
+- Test with mock trade data
+- Ensure performance updates in real-time
+
+**Success Criteria:**
+✅ Accurate performance metrics displayed  
+✅ Real-time updates as signals trigger  
+✅ Clean, intuitive visualization of results  
+✅ Persistent storage of trade history
 
 **Next Steps:**
 1. Add more alert types and customization options

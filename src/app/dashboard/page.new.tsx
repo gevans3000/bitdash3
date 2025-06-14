@@ -2,13 +2,6 @@ import React from 'react';
 import { CandleChart } from '@/components/CandleChart';
 import { MarketRegimeIndicator } from '@/components/MarketRegimeIndicator';
 import PerformanceMetricsPanel from '@/components/dashboard/PerformanceMetricsPanel';
-import dynamic from 'next/dynamic';
-
-// Dynamically import PerformanceMetrics with no SSR since it uses browser APIs
-const PerformanceMetrics = dynamic(
-  () => import('@/components/PerformanceMetrics'),
-  { ssr: false }
-);
 
 export default function DashboardPage() {
   return (
@@ -87,6 +80,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          
+          <PerformanceMetricsPanel />
         </div>
         
         {/* Main chart area */}
