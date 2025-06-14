@@ -5,12 +5,15 @@ import { Candle, OrderBookData, Trade } from '@/lib/types';
 import { TradingSignalPanel } from './TradingSignalPanel';
 import OnChainInsightsPanel from './OnChainInsightsPanel';
 import { useSignals } from '@/hooks/useSignals';
-import { browserCache, withCache } from '@/lib/cache/browserCache';
+import { browserCache } from '@/lib/cache/browserCache';
+import { smartFetch } from '@/lib/cache/smart-cache';
+import { useConnectionStatus } from '@/hooks/useWebSocket';
 import DataFreshnessIndicator from './DataFreshnessIndicator';
 import OpenInterestCard from './OpenInterestCard';
 import BacktestConfigPanel from './BacktestConfigPanel';
 import BacktestResultsPanel from './BacktestResultsPanel';
 import { runBacktest, BacktestResult } from '@/lib/backtesting/engine';
+import QuickActionPanel from './QuickActionPanel';
 
 interface LiveDashboardProps {
   refreshTrigger?: number;
@@ -38,6 +41,7 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   
   // Loading state
   const [loading, setLoading] = useState(false);
+  const connectionStatus = useConnectionStatus();
   
   // Track initialization status
   const initialized = useRef(false);
@@ -99,8 +103,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
       const symbol = new URLSearchParams(window.location.search).get('symbol') || 'BTCUSDT';
       const interval = new URLSearchParams(window.location.search).get('interval') || '5m';
       
-      // Use withCache pattern to handle caching and network requests
-      const { data, fromCache, age } = await withCache(
+      // Use smart cache with health monitoring
+      const { data, fromCache, age } = await smartFetch(
         `market_data_${symbol}_${interval}`,
         async () => {
           // Fetch market data from our API
@@ -113,11 +117,10 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
           return response.json();
         },
         {
-          // Cache settings
-          ttl: 60000, // 1 minute TTL for market data
+          ttl: 60000,
           source: 'api',
-          forceRefresh: refreshTrigger > 0, // Force refresh when trigger changes
-          maxAge: 300000 // 5 minutes max age
+          maxAge: 300000,
+          strategy: refreshTrigger > 0 ? 'network-first' : 'cache-first'
         }
       );
       
@@ -218,6 +221,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
           dataSource={dataSource}
           cacheKey="market_data_meta"
           browserCache={browserCache}
+          connectionStatus={connectionStatus}
+          onRefresh={fetchMarketData}
           className="hover:bg-white/5 px-2 py-1 rounded-md cursor-pointer transition-colors"
         />
       </div>
@@ -394,6 +399,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
         <BacktestConfigPanel candles={displayCandles} onRun={handleBacktest} />
         <BacktestResultsPanel result={backtestResult} />
       </div>
+
+      {/* Quick Actions */}
+      <QuickActionPanel latestPrice={latestPrice || 0} className="mt-4" />
     </div>
   );
 }

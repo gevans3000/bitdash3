@@ -9,6 +9,9 @@ interface DataFreshnessIndicatorProps {
   cacheKey?: string;
   browserCache?: BrowserCache;
   className?: string;
+  connectionStatus?: 'connecting' | 'connected' | 'disconnected' | 'error';
+  onRefresh?: () => void;
+  refreshInterval?: number;
 }
 
 /**
@@ -19,33 +22,35 @@ export default function DataFreshnessIndicator({
   dataSource = 'unknown',
   cacheKey,
   browserCache,
-  className = ''
+  className = '',
+  connectionStatus,
+  onRefresh,
+  refreshInterval = 30000
 }: DataFreshnessIndicatorProps) {
   const [age, setAge] = useState<number>(0);
-  const [status, setStatus] = useState<'fresh' | 'recent' | 'stale' | 'old' | 'unknown'>('unknown');
+  const [status, setStatus] = useState<'fresh' | 'warn' | 'stale' | 'unknown'>('unknown');
   const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    // Update the freshness status when lastUpdated changes
     if (lastUpdated) {
       updateFreshness(lastUpdated);
-      
-      // Set up interval to update the time status
       const interval = setInterval(() => {
         updateFreshness(lastUpdated);
-      }, 10000); // Update every 10 seconds
-      
+        if (onRefresh && Date.now() - lastUpdated > refreshInterval) {
+          onRefresh();
+        }
+      }, 10000);
+
       return () => clearInterval(interval);
     }
-  }, [lastUpdated]);
+  }, [lastUpdated, onRefresh, refreshInterval]);
   
   // Check cache details if browser cache instance and key are provided
   useEffect(() => {
     if (browserCache && cacheKey) {
       const checkCache = async () => {
         const freshness = await browserCache.getFreshness(cacheKey);
-        const ttl = await browserCache.getTimeToExpiration(cacheKey);
         
         // Update attributes with the cache info
         if (freshness > 0) {
@@ -67,14 +72,12 @@ export default function DataFreshnessIndicator({
   };
   
   const updateStatusByAge = (ageMs: number) => {
-    if (ageMs < 30000) { // 30 seconds
+    if (ageMs < 30000) {
       setStatus('fresh');
-    } else if (ageMs < 120000) { // 2 minutes
-      setStatus('recent');
-    } else if (ageMs < 600000) { // 10 minutes
-      setStatus('stale');
+    } else if (ageMs < 120000) {
+      setStatus('warn');
     } else {
-      setStatus('old');
+      setStatus('stale');
     }
   };
   
@@ -93,37 +96,50 @@ export default function DataFreshnessIndicator({
   };
   
   const getStatusColor = () => {
+    if (dataSource === 'mock' || dataSource === 'cached') {
+      return 'bg-gray-500';
+    }
     switch (status) {
-      case 'fresh': return 'bg-green-500';
-      case 'recent': return 'bg-blue-500';
-      case 'stale': return 'bg-yellow-500';
-      case 'old': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'fresh':
+        return 'bg-green-500';
+      case 'warn':
+        return 'bg-yellow-500';
+      case 'stale':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
     }
   };
   
   const getSourceBadge = () => {
     switch (dataSource) {
-      case 'binance': return 'bg-yellow-800 text-yellow-200';
-      case 'coingecko': return 'bg-blue-800 text-blue-200';
-      case 'mock': return 'bg-red-800 text-red-200';
-      default: return 'bg-gray-700 text-gray-300';
+      case 'binance':
+        return 'bg-yellow-800 text-yellow-200';
+      case 'coingecko':
+        return 'bg-blue-800 text-blue-200';
+      case 'mock':
+        return 'bg-red-800 text-red-200';
+      case 'cached':
+        return 'bg-gray-700 text-gray-300';
+      default:
+        return 'bg-gray-700 text-gray-300';
     }
   };
   
   const toggleExpanded = () => setIsExpanded(!isExpanded);
-  
+
   return (
-    <div 
+    <div
       className={`flex flex-col text-xs ${className}`}
       onClick={toggleExpanded}
     >
-      <div className="flex items-center cursor-pointer">
-        <div className={`w-2 h-2 rounded-full mr-2 ${getStatusColor()}`}></div>
-        <span className="mr-1">{timeSinceUpdate || 'Unknown'}</span>
-        <span className={`px-1 py-0.5 text-2xs rounded ${getSourceBadge()}`}>
-          {dataSource}
-        </span>
+      <div className="flex items-center cursor-pointer gap-1">
+        <div className={`w-2 h-2 rounded-full ${getStatusColor()}`}></div>
+        {connectionStatus && (
+          <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : connectionStatus === 'connecting' ? 'bg-yellow-500' : connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-500'}`}></div>
+        )}
+        <span>{timeSinceUpdate || 'Unknown'}</span>
+        <span className={`px-1 py-0.5 text-2xs rounded ${getSourceBadge()}`}>{dataSource}</span>
       </div>
       
       {isExpanded && (
@@ -131,6 +147,7 @@ export default function DataFreshnessIndicator({
           <div>Last update: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Unknown'}</div>
           <div>Status: {status}</div>
           <div>Age: {formatTimeSince(age)}</div>
+          {connectionStatus && <div>Connection: {connectionStatus}</div>}
         </div>
       )}
     </div>
