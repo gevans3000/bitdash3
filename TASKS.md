@@ -392,6 +392,7 @@ Mark each task as complete only when ALL criteria are met:
 - [x] **Task 9:** Quick Action Panel (Completed: Buy/Sell, alerts, position sizing, export)
 - [x] **Task 10:** Data Freshness & Reliability
 
+
 **Final Success Criteria:**
 - ✅ Dashboard helps users identify 2-3 daily Bitcoin trading opportunities
 - ✅ All signals include entry, stop loss, and take profit levels
@@ -399,6 +400,7 @@ Mark each task as complete only when ALL criteria are met:
 - ✅ Users can act quickly on profitable setups
 - ✅ No API rate limit violations
 - ✅ Works reliably with mock data offline
+- ✅ Unit tests for volume indicators ensuring spike and confirmation logic
 
 **Ready for Production:** When all 10 tasks complete with full testing validation
 - ✅ Unused development files removed (LiveDashboard.tsx.new, LiveDashboard.fixed.tsx, dashboard/page.new.tsx)
