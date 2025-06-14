@@ -390,6 +390,7 @@ Mark each task as complete only when ALL criteria are met:
 - [x] **Task 8:** Performance Tracking (Completed: Win rate, P&L, and trade metrics)
 - [ ] **Task 9:** Quick Action Panel
 - [ ] **Task 10:** Data Freshness & Reliability
+- [x] **Test:** EMA crossover logic unit tests added
 
 **Final Success Criteria:**
 - ✅ Dashboard helps users identify 2-3 daily Bitcoin trading opportunities

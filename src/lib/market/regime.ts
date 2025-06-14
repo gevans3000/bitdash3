@@ -282,30 +282,32 @@ export class MarketRegimeDetector {
     const minusDIAvg = this.minusDMs.reduce((sum, val) => sum + val, 0) / this.adxPeriod;
 }
 
+/*
 // Calculate all indicators
 this.calculateADX();
 this.calculateRSI();
 this.calculateEMA();
- 
+
 // Determine the current market regime
 this.determineRegime();
 
 // Add to history if regime changed
-if (this.regimeHistory.length === 0 || 
+if (this.regimeHistory.length === 0 ||
     this.regimeHistory[this.regimeHistory.length - 1].regime !== this.currentRegime) {
   this.regimeStartTime = Date.now();
   this.regimeHistory.push({
     timestamp: Date.now(),
     regime: this.currentRegime
   });
-  
+
   // Keep history size in check
   if (this.regimeHistory.length > this.maxHistory) {
     this.regimeHistory.shift();
   }
 }
- 
+
 return this.getCurrentAnalysis();
+*/
 }
 
  
