@@ -1,382 +1,377 @@
-# BitDash3 — 5-Minute Bitcoin Profit Engine
+# BitDash3 — 5-Minute Bitcoin Profit Dashboard
 
-**Mission:** Generate 2-3 profitable Bitcoin buy/sell signals daily with 55%+ win rate and 2:1+ R:R ratio
+**Mission:** Help users identify 2-3 profitable Bitcoin trading opportunities daily from 5-minute chart analysis
 
-**Testing Philosophy:** `npm run dev` uses mock data by default. Real API calls only on manual refresh.
-
----
-
-## 🏁 QUICK START CHECKLIST
-
-**Current Status:** ✅ Phase 1 Complete - Basic signal panel working with mock data
-
-**Next Action:** Choose your implementation path:
-- 🚀 **Fast Track:** Go to [A1] for immediate signal improvements
-- 🔧 **Technical:** Go to [B1] for data infrastructure  
-- 📊 **Analysis:** Go to [C1] for backtesting setup
+**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits
 
 ---
 
-## 🎯 PATH A: SIGNAL GENERATION (For Immediate Profit)
+## 🎯 TASK SEQUENCE FOR JUNIOR DEVELOPERS
 
-### [A1] Enhanced Mock Signal Generator (30 min) ⭐
-**Goal:** Improve current mock signals to simulate realistic market conditions
+Complete tasks in order. Each task builds on the previous one. Test after every task before moving to the next.
 
-**Steps:**
-1. **Replace static signals** with dynamic mock generator:
-   ```typescript
-   // Add to TradingSignalPanel.tsx
-   - Generate signals based on realistic price patterns
-   - Include confluence scoring simulation
-   - Add regime-specific signal types
-   ```
-2. **Test Scenarios:** Create mock data for:
-   - Bull trend (EMA crossover signals)
-   - Bear trend (Short signals)  
-   - Ranging market (Mean reversion)
-3. **Validation:** Signal confidence should vary 45-95%
+### **TASK 1: Enhanced 5-Minute Candle Display** (45 min)
+**Goal:** Show clear, actionable 5-minute Bitcoin price candles with visual profit indicators
 
-**Testing:** `npm run dev` → Check signal panel shows varied, realistic signals
+**Files to create/edit:**
+- `src/components/CandleChart.tsx` (create)
+- `src/lib/api/bitcoin-candles.ts` (enhance existing)
 
-**Success Criteria:** ✅ Signals change based on mock market regime  
-**Next:** [A2] Real Signal Integration
+**What to build:**
+1. **Candle Visualization:**
+   - Green candles for bullish moves (close > open)
+   - Red candles for bearish moves (close < open)
+   - Volume bars below candles
+   - Clear price labels on Y-axis
 
-### [A2] 5-Minute EMA Crossover Signals (45 min) ⭐⭐
-**Goal:** Implement core profitable signal: EMA(9) crossing EMA(21)
+2. **Profit Opportunity Highlights:**
+   - Yellow borders on candles with >2% moves
+   - Volume spikes (>150% average) in bright blue
+   - Recent highs/lows marked with horizontal lines
 
-**Files to Edit:**
-- `src/lib/signals/ema-signals.ts` (create)
-- `src/components/TradingSignalPanel.tsx` (update)
+3. **API Integration:**
+   - Use Binance API for 5-minute Bitcoin/USDT candles
+   - Cache for 60 seconds to respect rate limits
+   - Show last 50 candles (4+ hours of data)
 
-**Implementation:**
-1. **EMA Calculator:**
-   ```typescript
-   function calculateEMA(prices: number[], period: number): number[]
-   function detectCrossover(ema9: number[], ema21: number[]): 'bullish' | 'bearish' | 'none'
-   ```
+**Testing:** `npm run dev` → See clear candle chart with highlighted profit opportunities
+
+**Success Criteria:** ✅ Candles render correctly ✅ Volume visible ✅ Price movements >2% highlighted
+
+---
+
+### **TASK 2: EMA Signal Generation** (60 min)
+**Goal:** Generate buy/sell signals when fast EMA crosses slow EMA
+
+**Files to create/edit:**
+- `src/lib/signals/ema-crossover.ts` (create)
+- `src/components/SignalIndicator.tsx` (create)
+- `src/components/TradingSignalPanel.tsx` (enhance existing)
+
+**What to build:**
+1. **EMA Calculation:**
+   - EMA(9) for fast-moving average
+   - EMA(21) for slow-moving average
+   - Calculate from 5-minute candle closes
+
 2. **Signal Logic:**
-   - BUY: EMA(9) crosses above EMA(21) + RSI > 50
-   - SELL: EMA(9) crosses below EMA(21) + RSI < 50
-   - Confidence: Based on separation distance
-3. **Mock Integration:** Use pre-calculated EMA data for testing
+   - **BUY:** EMA(9) crosses above EMA(21) + price above both EMAs
+   - **SELL:** EMA(9) crosses below EMA(21) + price below both EMAs
+   - **HOLD:** No clear cross or conflicting signals
 
-**Testing:** 
-- Mock: Verify crossover detection works
-- Visual: Add EMA lines to price chart
+3. **Visual Display:**
+   - Green "BUY" badge with confidence percentage
+   - Red "SELL" badge with confidence percentage
+   - Gray "HOLD" when no clear signal
+   - Show EMA lines overlaid on price chart
 
-**Success Criteria:** ✅ Clear BUY/SELL signals on EMA crossovers  
-**Next:** [A3] RSI Confirmation
+**Testing:** Manually refresh data and verify signals appear when EMAs cross
 
-### [A3] RSI Confirmation Filter (30 min) ⭐⭐
-**Goal:** Add RSI(14) filter to reduce false signals
+**Success Criteria:** ✅ EMA lines visible on chart ✅ Signal badges appear ✅ Confidence scores make sense
 
-**Implementation:**
-1. **RSI Calculator:**
-   ```typescript
-   function calculateRSI(prices: number[], period: number = 14): number[]
-   function getRSISignal(rsi: number): 'overbought' | 'oversold' | 'neutral'
-   ```
-2. **Enhanced Signal Logic:**
-   - BUY: EMA crossover + RSI(30-70) + RSI rising
-   - SELL: EMA crossover + RSI(30-70) + RSI falling  
-   - SKIP: RSI extreme zones (>80 or <20)
-3. **Confidence Boost:** +20% confidence when RSI confirms
+---
 
-**Testing:** Compare signals before/after RSI filter
+### **TASK 3: RSI Confirmation Filter** (45 min)
+**Goal:** Filter EMA signals using RSI to reduce false signals and improve win rate
 
-**Success Criteria:** ✅ Fewer but higher quality signals  
-**Next:** [A4] Volume Confirmation
+**Files to create/edit:**
+- `src/lib/indicators/rsi.ts` (create)
+- `src/lib/signals/ema-crossover.ts` (enhance)
+- `src/components/RSIIndicator.tsx` (create)
 
-### [A4] Volume Spike Detection (30 min) ⭐⭐
-**Goal:** Only trade when volume confirms the move
+**What to build:**
+1. **RSI Calculation:**
+   - 14-period RSI from 5-minute candles
+   - Standard overbought (>70) and oversold (<30) levels
 
-**Implementation:**
+2. **Signal Enhancement:**
+   - **BUY signals only when:** EMA cross + RSI < 50 (not overbought)
+   - **SELL signals only when:** EMA cross + RSI > 50 (not oversold)
+   - Increase confidence when RSI confirms direction
+
+3. **Visual RSI Display:**
+   - RSI line chart below main price chart
+   - Red zone above 70, green zone below 30
+   - Current RSI value prominently displayed
+
+**Testing:** Compare signals before/after RSI filter - should see fewer but higher quality signals
+
+**Success Criteria:** ✅ RSI chart visible ✅ Signals filtered correctly ✅ Fewer false signals generated
+
+---
+
+### **TASK 4: Volume Spike Detection** (45 min)
+**Goal:** Identify high-volume moves that indicate strong price momentum
+
+**Files to create/edit:**
+- `src/lib/indicators/volume-analysis.ts` (create)
+- `src/components/VolumeSpikes.tsx` (create)
+- `src/lib/signals/ema-crossover.ts` (enhance)
+
+**What to build:**
 1. **Volume Analysis:**
-   ```typescript
-   function calculateVolumeMA(volumes: number[], period: number = 20): number[]
-   function detectVolumeSpike(currentVol: number, avgVol: number): boolean
-   ```
-2. **Signal Enhancement:**
-   - Require volume > 1.5x 20-period average
-   - Higher confidence for larger volume spikes
-   - Skip signals on low volume breakouts
-3. **Mock Data:** Include realistic volume patterns
+   - Calculate 20-period average volume
+   - Identify spikes >150% of average volume
+   - Track volume trend (increasing/decreasing)
 
-**Testing:** Verify volume requirements filter weak signals
+2. **Signal Boost:**
+   - Increase EMA signal confidence by 20% when volume spike confirms
+   - Mark high-volume candles with special indicators
+   - Show volume trend arrows
 
-**Success Criteria:** ✅ Only high-volume signals displayed  
-**Next:** [A5] Market Regime Detection
+3. **Visual Indicators:**
+   - Volume bars with normal (gray) and spike (blue) colors
+   - Volume trend arrows next to current price
+   - "HIGH VOLUME" alert badge when spike detected
 
-### [A5] Simple Market Regime (45 min) ⭐⭐⭐
-**Goal:** Adapt signal strategy based on market conditions
+**Testing:** Look for correlation between volume spikes and price moves
 
-**Implementation:**
-1. **ADX Calculator:**
-   ```typescript
-   function calculateADX(highs: number[], lows: number[], closes: number[]): number[]
-   function getMarketRegime(adx: number): 'trending' | 'ranging' | 'volatile'
-   ```
-2. **Regime-Based Signals:**
-   - **Trending (ADX > 25):** Use EMA crossovers, wider stops
-   - **Ranging (ADX < 20):** Use mean reversion, tight stops
-   - **Volatile:** Reduce position size, wider stops
-3. **UI Indicator:** Show current regime prominently
-
-**Testing:** 
-- Mock different ADX values
-- Verify signal strategy changes
-
-**Success Criteria:** ✅ Signal strategy adapts to market regime  
-**Next:** [A6] Dynamic Stop-Loss
-
-### [A6] ATR-Based Dynamic Stops (30 min) ⭐⭐⭐
-**Goal:** Calculate optimal stop-loss using Average True Range
-
-**Implementation:**
-1. **ATR Calculator:**
-   ```typescript
-   function calculateATR(highs: number[], lows: number[], closes: number[]): number[]
-   function getOptimalStop(atr: number, regime: string): number
-   ```
-2. **Stop-Loss Logic:**
-   - **Trending:** 2.5x ATR from entry
-   - **Ranging:** 1.5x ATR from entry
-   - **Volatile:** 3.0x ATR from entry
-3. **Position Sizing:** Risk 1% account based on stop distance
-
-**Testing:** Verify stop distances make sense for different regimes
-
-**Success Criteria:** ✅ Dynamic stops shown in signal panel  
-**Next:** [B1] or [C1] based on priority
+**Success Criteria:** ✅ Volume spikes highlighted ✅ Signal confidence adjusts ✅ Volume trend visible
 
 ---
 
-## 🔧 PATH B: DATA INFRASTRUCTURE (For Reliability)
+### **TASK 5: Price Target Calculator** (60 min)
+**Goal:** Show users exactly where to take profits and set stop losses
 
-### [B1] Cached Market Data (45 min) ⭐
-**Goal:** Implement smart caching to minimize API calls
+**Files to create/edit:**
+- `src/lib/trading/price-targets.ts` (create)
+- `src/components/TradingTargets.tsx` (create)
+- `src/components/TradingSignalPanel.tsx` (enhance)
 
-**Implementation:**
-1. **Enhanced Cache:**
-   ```typescript
-   // Update useMarketData.ts
-   - Cache 5m candles for 4 hours  
-   - Cache current price for 10 seconds
-   - Cache order book for 5 seconds
-   ```
-2. **Refresh Strategy:**
-   - Auto-refresh only critical data
-   - Manual refresh button for full update
-   - Visual indicators for data freshness
-3. **Offline Mode:** Extended mock data when disconnected
+**What to build:**
+1. **Target Calculation:**
+   - **Take Profit:** 2x the stop loss distance (2:1 R:R ratio)
+   - **Stop Loss:** Based on recent swing low/high or ATR
+   - **Entry Price:** Current market price when signal triggers
 
-**Testing:** 
-- Verify `npm run dev` minimal API usage
-- Test manual refresh functionality
+2. **Risk Management:**
+   - Calculate position size for 1% account risk
+   - Show dollar amounts for common account sizes ($1K, $5K, $10K)
+   - Display maximum loss per trade
 
-**Success Criteria:** ✅ Dashboard works offline, minimal API calls  
-**Next:** [B2] WebSocket Optimization
+3. **Visual Price Levels:**
+   - Horizontal lines on chart for entry, stop, target
+   - Color-coded: Green (target), Red (stop), Yellow (entry)
+   - Percentage gains/losses clearly labeled
 
-### [B2] WebSocket Connection Manager (60 min) ⭐⭐
-**Goal:** Reliable real-time data with minimal overhead
+**Testing:** Verify 2:1 risk-reward ratios and reasonable stop distances
 
-**Implementation:**
-1. **Connection Strategy:**
-   ```typescript
-   // Update websocket.ts
-   - Connect only when dashboard is active
-   - Automatic disconnect after 5 min idle
-   - Exponential backoff on reconnect
-   ```
-2. **Data Throttling:**
-   - Batch updates every 5 seconds
-   - Only update when price changes >0.01%
-   - Pause updates when tab inactive
-3. **Manual Mode:** Button to enable/disable live data
-
-**Testing:** Monitor connection behavior and data usage
-
-**Success Criteria:** ✅ Efficient WebSocket usage, manual control  
-**Next:** [B3] Error Handling
-
-### [B3] Robust Error Handling (30 min) ⭐
-**Goal:** Graceful degradation when APIs fail
-
-**Implementation:**
-1. **Fallback Chain:**
-   ```typescript
-   WebSocket → REST API → Cached Data → Mock Data
-   ```
-2. **Error UI:**
-   - Clear error messages
-   - Data source indicators
-   - Retry mechanisms
-3. **Mock Fallback:** Always-working mock signals
-
-**Testing:** Disconnect internet, verify graceful handling
-
-**Success Criteria:** ✅ App never crashes, clear error states  
-**Next:** [A6] or [C1]
+**Success Criteria:** ✅ Price levels visible on chart ✅ Risk amounts calculated ✅ 2:1 R:R maintained
 
 ---
 
-## 📊 PATH C: BACKTESTING & VALIDATION (For Confidence)
+### **TASK 6: Market Regime Detection** (75 min)
+**Goal:** Adapt signals based on whether Bitcoin is trending or ranging
 
-### [C1] Historical Data Loader (45 min) ⭐⭐
-**Goal:** Load historical 5m Bitcoin data for backtesting
+**Files to create/edit:**
+- `src/lib/analysis/market-regime.ts` (create)
+- `src/components/MarketRegime.tsx` (create)
+- `src/lib/signals/ema-crossover.ts` (enhance)
 
-**Implementation:**
-1. **Data Source:**
-   ```typescript
-   // Create backtest-data.ts
-   - Load 90 days of 5m BTCUSDT data
-   - Include OHLCV + basic indicators  
-   - Cache locally for fast testing
-   ```
-2. **Data Format:**
-   - Standardized candle objects
-   - Pre-calculated EMA, RSI, ATR
-   - Market regime classifications
-3. **Mock Integration:** Use historical data in development
+**What to build:**
+1. **Regime Classification:**
+   - **TRENDING:** Price consistently above/below EMA(21), ADX > 25
+   - **RANGING:** Price oscillating around EMA(21), ADX < 25
+   - **BREAKOUT:** High volume + price breaking key levels
 
-**Testing:** Load and display historical signals
+2. **Regime-Specific Signals:**
+   - **Trending:** Follow EMA crossovers, wider stops
+   - **Ranging:** Mean reversion signals, tighter stops
+   - **Breakout:** Volume confirmation required
 
-**Success Criteria:** ✅ 90 days historical data loaded and accessible  
-**Next:** [C2] Signal Backtester
+3. **Visual Regime Display:**
+   - Large badge showing current regime (TRENDING/RANGING/BREAKOUT)
+   - Color-coded background tint on chart
+   - Regime change notifications
 
-### [C2] Basic Signal Backtester (60 min) ⭐⭐⭐
-**Goal:** Test signal performance on historical data
+**Testing:** Manually check regime classification matches visual price action
 
-**Implementation:**
-1. **Backtest Engine:**
-   ```typescript
-   // Create backtest-engine.ts
-   function runBacktest(signals: Signal[], data: HistoricalData): Results
-   - Track entries, exits, P&L
-   - Calculate win rate, avg R:R
-   - Include slippage and fees
-   ```
-2. **Metrics:**
-   - Win rate by signal confidence
-   - Average risk/reward ratio
-   - Maximum drawdown
-   - Sharpe ratio
-3. **Visual Results:** Charts showing equity curve
-
-**Testing:** Backtest EMA crossover strategy
-
-**Success Criteria:** ✅ Backtest shows realistic trading results  
-**Next:** [C3] Strategy Comparison
-
-### [C3] Strategy Performance Comparison (45 min) ⭐⭐
-**Goal:** Compare different signal strategies
-
-**Implementation:**
-1. **Strategy Tests:**
-   - EMA crossover only
-   - EMA + RSI filter  
-   - EMA + RSI + Volume
-   - Regime-aware signals
-2. **Comparison Metrics:**
-   - Risk-adjusted returns
-   - Maximum drawdown
-   - Trade frequency
-   - Best market conditions
-3. **Results Dashboard:** Side-by-side comparison
-
-**Testing:** Run all strategies on same historical data
-
-**Success Criteria:** ✅ Clear winner identified for live trading  
-**Next:** [A6] or [D1]
+**Success Criteria:** ✅ Regime correctly identified ✅ Signal strategy adapts ✅ Visual feedback clear
 
 ---
 
-## 🚀 PATH D: ADVANCED FEATURES (For Edge)
+### **TASK 7: Real-Time Alert System** (60 min)
+**Goal:** Notify users immediately when profitable signals appear
 
-### [D1] Multi-Timeframe Confluence (90 min) ⭐⭐⭐⭐
-**Goal:** Combine 5m, 15m, 1h signals for higher accuracy
+**Files to create/edit:**
+- `src/lib/alerts/signal-alerts.ts` (create)
+- `src/components/AlertManager.tsx` (create)
+- `src/hooks/useSignalNotifications.ts` (create)
 
-**Implementation:**
-1. **Timeframe Analysis:**
-   - 5m: Entry timing (EMA crossover)
-   - 15m: Trend filter (only trade with trend)
-   - 1h: Structure (support/resistance)
-2. **Confluence Scoring:**
-   - All timeframes aligned: +4 confidence
-   - 2/3 timeframes aligned: +2 confidence  
-   - Against higher timeframe: Skip trade
-3. **Visual Display:** Show all timeframe signals
+**What to build:**
+1. **Alert Triggers:**
+   - New BUY/SELL signal with >70% confidence
+   - Volume spike >200% average
+   - Price breakout of key levels
+   - Regime change notifications
 
-**Testing:** Compare single vs multi-timeframe accuracy
+2. **Notification Methods:**
+   - Browser notifications (with permission)
+   - Audio alerts (subtle beep)
+   - Visual flash/highlight on dashboard
+   - Alert log/history panel
 
-**Success Criteria:** ✅ Higher win rate with confluence filtering  
-**Next:** [D2] Order Flow
+3. **Alert Management:**
+   - Enable/disable specific alert types
+   - Adjust confidence thresholds
+   - Snooze functionality
+   - Clear alert history
 
-### [D2] Order Book Analysis (90 min) ⭐⭐⭐⭐
-**Goal:** Use bid/ask imbalance for signal confirmation
+**Testing:** Trigger alerts by refreshing data, verify all notification methods work
 
-**Implementation:**
-1. **Imbalance Calculator:**
-   ```typescript
-   function calculateImbalance(orderBook: OrderBook): number
-   - Ratio of bid vs ask volume in top 10 levels
-   - Weighted by price distance  
-   - Historical imbalance tracking
-   ```
-2. **Signal Enhancement:**
-   - Strong bid imbalance: Bullish confirmation
-   - Strong ask imbalance: Bearish confirmation
-   - Neutral imbalance: Reduce confidence
-3. **Large Order Detection:** Alert on >10 BTC orders
-
-**Testing:** Verify imbalance correlates with price movement
-
-**Success Criteria:** ✅ Order flow confirms technical signals  
-**Next:** [D3] Machine Learning
+**Success Criteria:** ✅ Browser notifications work ✅ Audio alerts functional ✅ Alert history saved
 
 ---
 
-## 🎯 TESTING CHECKPOINTS
+### **TASK 8: Performance Tracking** (90 min)
+**Goal:** Track signal accuracy and help users improve their trading
 
-**After Every 2 Steps:**
-1. Run `npm run dev` - No errors
-2. Check signal panel updates correctly  
-3. Verify mock data works offline
-4. Test manual refresh functionality
+**Files to create/edit:**
+- `src/lib/tracking/signal-performance.ts` (create)
+- `src/components/PerformanceMetrics.tsx` (create)
+- `src/lib/storage/trade-history.ts` (create)
 
-**Weekly Validation:**
-1. Backtest latest strategy
-2. Check win rate >50%
-3. Verify risk/reward >1.5:1
-4. Review signal frequency (2-3/day target)
+**What to build:**
+1. **Signal Tracking:**
+   - Record all generated signals with timestamps
+   - Track price movement after signal (5min, 15min, 1hr)
+   - Calculate win rate and average R:R ratio
+   - Store in browser localStorage
 
----
+2. **Performance Metrics:**
+   - Daily/weekly win rate percentages
+   - Average profit per winning trade
+   - Best performing signal types
+   - Time-of-day performance analysis
 
-## 🏆 SUCCESS METRICS
+3. **Visual Dashboard:**
+   - Performance charts (win rate over time)
+   - Signal accuracy breakdown by type
+   - Recent signal outcomes table
+   - Profit/loss trends
 
-**Phase Goals:**
-- **A-Path Complete:** High-quality 5m signals ready
-- **B-Path Complete:** Reliable data infrastructure  
-- **C-Path Complete:** Validated strategy performance
-- **D-Path Complete:** Advanced edge-finding features
+**Testing:** Generate several signals and verify tracking works correctly
 
-**Trading Targets:**
-- Win Rate: 55%+ (trending), 50%+ (ranging)
-- Risk/Reward: 2:1 average
-- Signals/Day: 2-3 high-confidence
-- Max Drawdown: <10%
-
-**Development Targets:**
-- `npm run dev` starts in <5 seconds
-- Minimal API calls unless manual refresh
-- No console errors or infinite loops
-- All features work with mock data
+**Success Criteria:** ✅ Signals tracked accurately ✅ Performance calculated ✅ Historical data persists
 
 ---
 
-## 🔄 CURRENT STATUS
+### **TASK 9: Quick Action Panel** (45 min)
+**Goal:** Provide one-click access to common trading actions
 
-✅ **Phase 1 Complete:** Basic signal panel with mock data  
-🎯 **Next Recommended:** [A1] Enhanced Mock Signals (Quick win)  
-🔧 **Alternative:** [B1] Cached Data (Reliability focus)  
-📊 **Alternative:** [C1] Historical Data (Validation focus)
+**Files to create/edit:**
+- `src/components/QuickActions.tsx` (create)
+- `src/lib/trading/quick-trades.ts` (create)
+- `src/components/LiveDashboard.tsx` (enhance)
+
+**What to build:**
+1. **Action Buttons:**
+   - "Execute BUY Signal" with pre-filled amounts
+   - "Set Price Alerts" for key levels
+   - "Calculate Position Size" quick tool
+   - "Export Signal Data" for record keeping
+
+2. **Quick Calculations:**
+   - Position size calculator with risk slider
+   - Profit/loss estimator for different scenarios
+   - Risk-reward ratio validator
+   - Break-even price calculator
+
+3. **Integration Links:**
+   - "Copy to Clipboard" for trade parameters
+   - "Open Exchange" links (educational only)
+   - "Save Trade Plan" functionality
+   - "Share Signal" for discussion
+
+**Testing:** Verify all buttons work and calculations are accurate
+
+**Success Criteria:** ✅ All buttons functional ✅ Calculations correct ✅ Data export works
+
+---
+
+### **TASK 10: Data Freshness & Reliability** (60 min)
+**Goal:** Ensure users always know how current their data is
+
+**Files to create/edit:**
+- `src/components/DataFreshness.tsx` (enhance existing)
+- `src/lib/api/data-health.ts` (create)
+- `src/lib/cache/smart-cache.ts` (enhance existing)
+
+**What to build:**
+1. **Freshness Indicators:**
+   - Green: Data <30 seconds old
+   - Yellow: Data 30s-2min old  
+   - Red: Data >2min old
+   - Gray: Using cached/mock data
+
+2. **Health Monitoring:**
+   - API response time tracking
+   - Error rate monitoring
+   - Automatic fallback to backup APIs
+   - Connection status indicators
+
+3. **Smart Refresh:**
+   - Auto-refresh critical data every 30 seconds
+   - Manual refresh button for immediate updates
+   - Refresh rate adjustment based on API limits
+   - Background refresh without UI interruption
+
+**Testing:** Disconnect internet, verify fallback behavior and status indicators
+
+**Success Criteria:** ✅ Freshness status accurate ✅ Fallback works ✅ Auto-refresh functions
+
+---
+
+## 🧪 TESTING CHECKPOINTS
+
+After completing every 3 tasks, run this full test sequence:
+
+### Quick Smoke Test (5 min)
+```bash
+npm run dev
+# 1. Dashboard loads without errors
+# 2. Charts render with data
+# 3. Signals appear and update
+# 4. All buttons clickable
+# 5. No console errors
+```
+
+### Signal Accuracy Test (10 min)
+1. Manually refresh data 5 times
+2. Verify signals make logical sense
+3. Check EMA lines match signal direction
+4. Confirm RSI supports signal bias
+5. Validate price targets show 2:1 R:R
+
+### Performance Test (5 min)
+1. Monitor API call frequency (should be <10/min)
+2. Check page load speed (<3 seconds)
+3. Verify smooth chart updates
+4. Test with slow internet connection
+
+---
+
+## 📋 TASK COMPLETION CHECKLIST
+
+Mark each task as complete only when ALL criteria are met:
+
+- [ ] **Task 1:** Enhanced 5-Minute Candles
+- [ ] **Task 2:** EMA Signal Generation  
+- [ ] **Task 3:** RSI Confirmation Filter
+- [ ] **Task 4:** Volume Spike Detection
+- [ ] **Task 5:** Price Target Calculator
+- [ ] **Task 6:** Market Regime Detection
+- [ ] **Task 7:** Real-Time Alert System
+- [ ] **Task 8:** Performance Tracking
+- [ ] **Task 9:** Quick Action Panel
+- [ ] **Task 10:** Data Freshness & Reliability
+
+**Final Success Criteria:**
+- ✅ Dashboard helps users identify 2-3 daily Bitcoin trading opportunities
+- ✅ All signals include entry, stop loss, and take profit levels
+- ✅ Win rate tracking shows signal accuracy over time
+- ✅ Users can act quickly on profitable setups
+- ✅ No API rate limit violations
+- ✅ Works reliably with mock data offline
+
+**Ready for Production:** When all 10 tasks complete with full testing validation
