@@ -11,22 +11,22 @@ Note: Tasks can be referenced by their numbers. Up 1 or more tasks can be worked
 *Building on existing caching and data freshness components*
 
 ### 1.1 Basic Market Data API (Low Risk)
-- [ ] 1.1 Enhance existing `app/api/market-data/route.ts` for 5-minute specific data:
-- [ ] 1.2 Add 5-minute candle prioritization in API responses
-- [ ] 1.3 Keep existing fallback mechanisms (Binance → CoinGecko → Mock)
-- [ ] 1.4 Leverage existing cache implementation without modifications
+- [x] 1.1 Enhance existing `app/api/market-data/route.ts` for 5-minute specific data:
+- [x] 1.2 Add 5-minute candle prioritization in API responses
+- [x] 1.3 Keep existing fallback mechanisms (Binance → CoinGecko → Mock)
+- [x] 1.4 Leverage existing cache implementation without modifications
 
 ### 1.2 Technical Indicator Core (Low Risk)
-- [ ] 1.5 Create simple, pure calculation functions in `src/lib/indicators/`:
-- [ ] 1.6 Implement basic moving averages (EMA, SMA) first
-- [ ] 1.7 Add basic momentum oscillators (RSI, MACD)
-- [ ] 1.8 Test extensively with static data before integration
+- [x] 1.5 Create simple, pure calculation functions in `src/lib/indicators/`:
+- [x] 1.6 Implement basic moving averages (EMA, SMA) first
+- [x] 1.7 Add basic momentum oscillators (RSI, MACD)
+- [x] 1.8 Test extensively with static data before integration
 
 ### 1.3 Minimal UI Components (Low Risk)
-- [ ] 1.9 Set up basic UI structure with simple, stateless components:
-- [ ] 1.10 Create reusable card components for data display
-- [ ] 1.11 Implement basic price display component
-- [ ] 1.12 Add responsive grid layout foundation
+- [x] 1.9 Set up basic UI structure with simple, stateless components:
+- [x] 1.10 Create reusable card components for data display
+- [x] 1.11 Implement basic price display component
+- [x] 1.12 Add responsive grid layout foundation
 
 ## 2. Signal Generation & WebSockets
 *Adding real-time capabilities with careful state management*
