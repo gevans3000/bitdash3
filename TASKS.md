@@ -385,9 +385,9 @@ Mark each task as complete only when ALL criteria are met:
 - [x] **Task 3:** Volume Spike Detection (Completed: 150% volume threshold with alerts)
 - [x] **Task 4:** RSI Confirmation Filter (Completed: RSI 14 with overbought/oversold confirmation)
 - [x] **Task 5:** Price Target Calculator (Completed: ATR-based stop loss with 2:1 risk-reward)
-- [ ] **Task 6:** Market Regime Detection
-- [ ] **Task 7:** Real-Time Alert System
-- [ ] **Task 8:** Performance Tracking
+- [x] **Task 6:** Market Regime Detection (Completed: Regime classification with confidence scoring)
+- [x] **Task 7:** Real-Time Alert System (Completed: Browser notifications with sound alerts)
+- [x] **Task 8:** Performance Tracking (Completed: Win rate, P&L, and trade metrics)
 - [ ] **Task 9:** Quick Action Panel
 - [ ] **Task 10:** Data Freshness & Reliability
 
