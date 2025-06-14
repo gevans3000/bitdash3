@@ -398,5 +398,6 @@ Mark each task as complete only when ALL criteria are met:
 - ✅ Users can act quickly on profitable setups
 - ✅ No API rate limit violations
 - ✅ Works reliably with mock data offline
+- ✅ Unit tests for volume indicators ensuring spike and confirmation logic
 
 **Ready for Production:** When all 10 tasks complete with full testing validation
