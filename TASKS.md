@@ -1,8 +1,8 @@
 # BitDash3 — 5-Minute Bitcoin Profit Dashboard
 
-**Mission:** Help users identify 2-3 profitable Bitcoin trading opportunities daily from 5-minute chart analysis
+**Mission:** Help users identify 2-3 profitable Bitcoin trading opportunities daily from 5-minute chart analysis.
 
-**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits, make ure to use low code and minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe
+**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits. Prioritize low code, minimal compute, and maximum performance. The sole purpose is to generate actionable BUY/SELL signals for BTC/USDT on the 5-minute timeframe.
 
 ---
 
@@ -42,6 +42,7 @@ To empower users to make profitable 5-minute Bitcoin trading choices, the dashbo
     *   **Data Freshness Indicator:** Crucial for 5-minute charts, showing data age and source.
 
 This user-centric view should guide the development and presentation of all dashboard elements.
+---
 ## 📈 Recommended Dashboard Elements
 
 The dashboard should surface the most actionable information at a glance so a
@@ -60,341 +61,97 @@ components to maximize clarity, ensuring they deliver the "Key Information for P
 - **Performance Metrics Panel** – Track win rate, profit factor, and recent trade outcomes to evaluate signal reliability.
 - **Quick Action Buttons** – Optional shortcuts for copying trade parameters or executing mock trades.
 
+---
+## 🚀 Profit-Focused Task Roadmap for BitDash3
 
-## 🎯 TASK SEQUENCE FOR JUNIOR DEVELOPERS
+This roadmap prioritizes tasks based on their direct impact on generating profitable 5-minute Bitcoin trading signals and enabling users to act on them effectively. All API usage must adhere to free-tier limits, primarily using Binance (cached) for candle data.
 
-Complete tasks in order. Each task builds on the previous one. Test after every task before moving to the next.
+### 🏆 Core Signal Engine: Generate Actionable Trade Setups
 
-### **TASK 1: Enhanced 5-Minute Candle Display** (45 min)
-**Goal:** Show clear, actionable 5-minute Bitcoin price candles with visual profit indicators
+These tasks form the heart of BitDash3, creating the signals users trade on.
 
-**Files to create/edit:**
-- `src/components/CandleChart.tsx` (create)
-- `src/lib/api/bitcoin-candles.ts` (enhance existing)
+1.  **🏆 EMA Crossover Signal Logic**
+    *   **Goal:** Implement robust EMA(9)/EMA(21) crossover detection for BUY/SELL signals.
+    *   **Action:** Calculate EMAs from 5-min candle closes. Generate BUY signal if EMA9 crosses above EMA21 & price confirms. Generate SELL if EMA9 crosses below EMA21 & price confirms. HOLD otherwise.
+    *   **Impact:** Primary signal generator.
+    *   **Files:** `src/lib/signals/ema-crossover.ts` (create/enhance), `src/lib/signal.ts` (integrate)
 
-**What to build:**
-1. **Candle Visualization:**
-   - Green candles for bullish moves (close > open)
-   - Red candles for bearish moves (close < open)
-   - Volume bars below candles
-   - Clear price labels on Y-axis
+2.  **🏆 RSI Confirmation Filter**
+    *   **Goal:** Refine EMA signals with RSI(14) to improve quality and reduce false positives.
+    *   **Action:** Filter BUY signals if RSI > 50 (approaching overbought for entry). Filter SELL signals if RSI < 50 (approaching oversold for entry). Boost confidence if RSI confirms trend.
+    *   **Impact:** Increases signal reliability, leading to more profitable trades.
+    *   **Files:** `src/lib/indicators/rsi.ts` (create/enhance), `src/lib/signals/ema-crossover.ts` (enhance), `src/lib/signal.ts` (integrate)
 
-2. **Profit Opportunity Highlights:**
-   - Yellow borders on candles with >2% moves
-   - Volume spikes (>150% average) in bright blue
-   - Recent highs/lows marked with horizontal lines
+3.  **🏆 Volume Spike Confirmation**
+    *   **Goal:** Use significant volume spikes (>150% of 20-period average) to confirm signal strength.
+    *   **Action:** Identify volume spikes. Boost signal confidence if a spike aligns with the signal direction.
+    *   **Impact:** Validates momentum behind signals.
+    *   **Files:** `src/lib/indicators/volume.ts` (or `volume-analysis.ts`), `src/lib/signals/ema-crossover.ts` (enhance), `src/lib/signal.ts` (integrate)
 
-3. **API Integration:**
-   - Use Binance API for 5-minute Bitcoin/USDT candles
-   - Cache for 60 seconds to respect rate limits
-   - Show last 50 candles (4+ hours of data)
+4.  **🏆 Market Regime-Adaptive Strategy**
+    *   **Goal:** Implement market regime detection (Trending/Ranging) to adjust signal logic and interpretation.
+    *   **Action:** Classify market state. Adapt EMA/RSI/Volume logic based on regime (e.g., trend-following in trends, mean-reversion in ranges).
+    *   **Impact:** Crucial for applying the right strategy to current market conditions.
+    *   **Files:** `src/lib/market/regime-detector.ts` (enhance), `src/lib/signal.ts` (integrate `StrategyAutomaticSwitcher`), `src/lib/signals/confluence-scorer.ts` (regime-aware logic)
 
-**Testing:** `npm run dev` → See clear candle chart with highlighted profit opportunities
+5.  **🏆 Actionable Price Targets (Entry, SL, TP)**
+    *   **Goal:** Provide clear Entry, Stop-Loss (ATR-based or swing points), and Take-Profit (min 2:1 R:R) for every signal.
+    *   **Action:** Calculate and display these three key price levels for every BUY/SELL signal.
+    *   **Impact:** Defines the trade, manages risk, and secures profit.
+    *   **Files:** `src/lib/trading/price-targets.ts` (create/enhance), `src/lib/signal.ts` (integrate), `src/lib/signals/position-sizer.ts`
 
-**Success Criteria:** ✅ Candles render correctly ✅ Volume visible ✅ Price movements >2% highlighted
+### 🎯 Essential Foundations & User Trust
+
+These tasks ensure data is accurate, timely, and clearly presented.
+
+6.  **🎯 Crystal-Clear 5-Minute Candle Chart**
+    *   **Goal:** Display an accurate and easy-to-read 5-minute BTC/USDT candle chart.
+    *   **Action:** Render candles (Open, High, Low, Close), volume bars. Overlay EMAs (9/21). Highlight significant price moves (>2%) and volume spikes. Use Binance API (cached via `/api/candles`).
+    *   **Impact:** Core visualization for all analysis.
+    *   **Files:** `src/components/CandleChart.tsx`, `src/app/api/candles/route.ts`
+
+7.  **🎯 Real-Time Data Freshness Indicator**
+    *   **Goal:** Ensure users always know the timeliness of the displayed data.
+    *   **Action:** Display data age (e.g., "Live", "15s ago", "Cached >1m"). Indicate if using mock data. Implement smart refresh logic respecting API limits.
+    *   **Impact:** Builds trust and prevents trading on stale data.
+    *   **Files:** `src/components/DataFreshnessIndicator.tsx`, `src/lib/cache/smart-cache.ts`, `src/lib/api/data-health.ts`
+
+### ✅ Actionability & User Experience
+
+These tasks help users act swiftly and confidently on signals.
+
+8.  **✅ Instant Signal Alerts**
+    *   **Goal:** Notify users immediately of new, high-confidence trading signals.
+    *   **Action:** Implement browser notifications (and optional sound) for new BUY/SELL signals meeting a defined confidence threshold.
+    *   **Impact:** Enables timely action on fleeting 5-minute opportunities.
+    *   **Files:** `src/components/AlertManager.tsx`, `src/hooks/useSignalNotifications.ts`
+
+9.  **✅ Visual Signal & Context Display**
+    *   **Goal:** Clearly present the generated signal, its confidence, reason, and supporting data.
+    *   **Action:** Create UI panels to show: Core Signal (BUY/SELL/HOLD), Confidence %, Reason, Market Regime, Active Strategy, EMA status, RSI value/interpretation, Volume insights, Bollinger Bands status.
+    *   **Impact:** Provides all necessary info for a quick, informed decision.
+    *   **Files:** `src/components/TradingSignalPanel.tsx` (enhance), `src/components/RSIIndicator.tsx`, `src/components/MarketRegimeIndicator.tsx`, `src/components/VolumeSpikes.tsx` (or integrate into main panel)
+
+### ⚙️ Enhancements & Long-Term Refinement
+
+These tasks improve usability and help validate strategy performance over time.
+
+10. **⚙️ Quick Action Panel**
+    *   **Goal:** Provide one-click shortcuts for common actions related to a signal.
+    *   **Action:** Buttons to "Copy Trade Parameters (Entry, SL, TP)", "Set Price Alert (mock)", "Calculate Position Size (helper)".
+    *   **Impact:** Streamlines user workflow.
+    *   **Files:** `src/components/QuickActionPanel.tsx`, `src/lib/trading/quick-trades.ts`
+
+11. **⚙️ Basic Performance Tracking**
+    *   **Goal:** Track the historical performance of generated signals to build confidence and identify areas for improvement.
+    *   **Action:** Record signal (type, time, price), and its outcome (e.g., hit TP, SL, or closed manually after X bars). Display basic win rate & P/L factor. Store locally.
+    *   **Impact:** Validates strategy effectiveness over time.
+    *   **Files:** `src/lib/tracking/signal-performance.ts`, `src/components/PerformanceMetricsPanel.tsx`, `src/lib/storage/trade-history.ts`
 
 ---
+## 📋 TASK COMPLETION STATUS (Original Sequence)
 
-### **TASK 2: EMA Signal Generation** (60 min)
-**Goal:** Generate buy/sell signals when fast EMA crosses slow EMA
-
-**Files to create/edit:**
-- `src/lib/signals/ema-crossover.ts` (create)
-- `src/components/SignalIndicator.tsx` (create)
-- `src/components/TradingSignalPanel.tsx` (enhance existing)
-
-**What to build:**
-1. **EMA Calculation:**
-   - EMA(9) for fast-moving average
-   - EMA(21) for slow-moving average
-   - Calculate from 5-minute candle closes
-
-2. **Signal Logic:**
-   - **BUY:** EMA(9) crosses above EMA(21) + price above both EMAs
-   - **SELL:** EMA(9) crosses below EMA(21) + price below both EMAs
-   - **HOLD:** No clear cross or conflicting signals
-
-3. **Visual Display:**
-   - Green "BUY" badge with confidence percentage
-   - Red "SELL" badge with confidence percentage
-   - Gray "HOLD" when no clear signal
-   - Show EMA lines overlaid on price chart
-
-**Testing:** Manually refresh data and verify signals appear when EMAs cross
-
-**Success Criteria:** ✅ EMA lines visible on chart ✅ Signal badges appear ✅ Confidence scores make sense
-
----
-
-### **TASK 3: RSI Confirmation Filter** (45 min)
-**Goal:** Filter EMA signals using RSI to reduce false signals and improve win rate
-
-**Files to create/edit:**
-- `src/lib/indicators/rsi.ts` (create)
-- `src/lib/signals/ema-crossover.ts` (enhance)
-- `src/components/RSIIndicator.tsx` (create)
-
-**What to build:**
-1. **RSI Calculation:**
-   - 14-period RSI from 5-minute candles
-   - Standard overbought (>70) and oversold (<30) levels
-
-2. **Signal Enhancement:**
-   - **BUY signals only when:** EMA cross + RSI < 50 (not overbought)
-   - **SELL signals only when:** EMA cross + RSI > 50 (not oversold)
-   - Increase confidence when RSI confirms direction
-
-3. **Visual RSI Display:**
-   - RSI line chart below main price chart
-   - Red zone above 70, green zone below 30
-   - Current RSI value prominently displayed
-
-**Testing:** Compare signals before/after RSI filter - should see fewer but higher quality signals
-
-**Success Criteria:** ✅ RSI chart visible ✅ Signals filtered correctly ✅ Fewer false signals generated
-
----
-
-### **TASK 4: Volume Spike Detection** (45 min)
-**Goal:** Identify high-volume moves that indicate strong price momentum
-
-**Files to create/edit:**
-- `src/lib/indicators/volume-analysis.ts` (create)
-- `src/components/VolumeSpikes.tsx` (create)
-- `src/lib/signals/ema-crossover.ts` (enhance)
-
-**What to build:**
-1. **Volume Analysis:**
-   - Calculate 20-period average volume
-   - Identify spikes >150% of average volume
-   - Track volume trend (increasing/decreasing)
-
-2. **Signal Boost:**
-   - Increase EMA signal confidence by 20% when volume spike confirms
-   - Mark high-volume candles with special indicators
-   - Show volume trend arrows
-
-3. **Visual Indicators:**
-   - Volume bars with normal (gray) and spike (blue) colors
-   - Volume trend arrows next to current price
-   - "HIGH VOLUME" alert badge when spike detected
-
-**Testing:** Look for correlation between volume spikes and price moves
-
-**Success Criteria:** ✅ Volume spikes highlighted ✅ Signal confidence adjusts ✅ Volume trend visible
-
----
-
-### **TASK 5: Price Target Calculator** (60 min)
-**Goal:** Show users exactly where to take profits and set stop losses
-
-**Files to create/edit:**
-- `src/lib/trading/price-targets.ts` (create)
-- `src/components/TradingTargets.tsx` (create)
-- `src/components/TradingSignalPanel.tsx` (enhance)
-
-**What to build:**
-1. **Target Calculation:**
-   - **Take Profit:** 2x the stop loss distance (2:1 R:R ratio)
-   - **Stop Loss:** Based on recent swing low/high or ATR
-   - **Entry Price:** Current market price when signal triggers
-
-2. **Risk Management:**
-   - Calculate position size for 1% account risk
-   - Show dollar amounts for common account sizes ($1K, $5K, $10K)
-   - Display maximum loss per trade
-
-3. **Visual Price Levels:**
-   - Horizontal lines on chart for entry, stop, target
-   - Color-coded: Green (target), Red (stop), Yellow (entry)
-   - Percentage gains/losses clearly labeled
-
-**Testing:** Verify 2:1 risk-reward ratios and reasonable stop distances
-
-**Success Criteria:** ✅ Price levels visible on chart ✅ Risk amounts calculated ✅ 2:1 R:R maintained
-
----
-
-### ✅ **TASK 6: Market Regime Detection**
-**Implementation Details:**
-- Created advanced `MarketRegimeDetector` class with multiple indicators
-- Implemented 5 distinct market regimes: Strong/Weak Up/Down trends and Ranging
-- Added confidence scoring based on ADX, volume, and EMA slope
-- Integrated with existing signal generation system
-- Built responsive UI component with detailed regime information
-
-**Key Features:**
-- **Multi-Indicator Analysis:** Combines ADX, RSI, EMA slope, and volume
-- **Confidence Scoring:** Visual indicator of regime strength
-- **Historical Context:** Tracks regime duration and changes
-- **Responsive Design:** Works across all device sizes
-
-**Next Steps:**
-1. Integrate regime detection with trading signals
-2. Add regime-specific strategy adjustments
-3. Implement visual indicators on the price chart
-4. Add regime change notifications
-
----
-
-### ✅ **TASK 7: Real-Time Alert System**
-**Implementation Details:**
-- Created a comprehensive alert system with browser notifications and sound alerts
-- Built a responsive `AlertManager` component with a clean, modern UI
-- Implemented a flexible `useSignalNotifications` hook for managing alerts
-- Added support for different alert types, priorities, and user preferences
-- Integrated with the existing signal generation system
-
-**Key Features:**
-- **Browser Notifications:** Native browser notifications for new signals
-- **Sound Alerts:** Configurable sounds for different alert types
-- **Visual Indicators:** Badge counters and color-coded alerts
-- **Alert Management:** Mark as read, dismiss, and clear functionality
-- **Responsive Design:** Works on all device sizes
-- **Customizable Settings:** Toggle sounds, set minimum confidence levels
-
----
-
-
-### **TASK 8: Performance Tracking** (90 min)
-**Goal:** Track signal accuracy and help users improve their trading
-
-**Files to create/edit:**
-- `src/lib/tracking/signal-performance.ts` (create)
-- `src/components/PerformanceMetrics.tsx` (create)
-- `src/lib/storage/trade-history.ts` (create)
-
-**What to build:**
-1. **Signal Tracking:**
-   - Record all generated signals with timestamps
-   - Track price movement after signal (5min, 15min, 1hr)
-   - Calculate win rate and average R:R ratio
-   - Store in browser localStorage
-
-2. **Performance Metrics:**
-   - Daily/weekly win rate percentages
-   - Average profit per winning trade
-   - Best performing signal types
-   - Time-of-day performance analysis
-
-3. **Visual Dashboard:**
-   - Performance charts (win rate over time)
-   - Signal accuracy breakdown by type
-   - Recent signal outcomes table
-   - Profit/loss trends
-
-**Testing:** Generate several signals and verify tracking works correctly
-
-**Success Criteria:** ✅ Signals tracked accurately ✅ Performance calculated ✅ Historical data persists
-
----
-
-### **TASK 9: Quick Action Panel** (45 min)
-**Implementation Details:**
-- Built `QuickActions` component with Radix UI
-- Added helpers in `quick-trades.ts` for trade execution
-- Integrated panel into `LiveDashboard`
-
-**Goal:** Provide one-click access to common trading actions
-
-**Files to create/edit:**
-- `src/components/QuickActions.tsx` (create)
-- `src/lib/trading/quick-trades.ts` (create)
-- `src/components/LiveDashboard.tsx` (enhance)
-
-**What to build:**
-1. **Action Buttons:**
-   - "Execute BUY Signal" with pre-filled amounts
-   - "Set Price Alerts" for key levels
-   - "Calculate Position Size" quick tool
-   - "Export Signal Data" for record keeping
-
-2. **Quick Calculations:**
-   - Position size calculator with risk slider
-   - Profit/loss estimator for different scenarios
-   - Risk-reward ratio validator
-   - Break-even price calculator
-
-3. **Integration Links:**
-   - "Copy to Clipboard" for trade parameters
-   - "Open Exchange" links (educational only)
-   - "Save Trade Plan" functionality
-   - "Share Signal" for discussion
-
-**Testing:** Verify all buttons work and calculations are accurate
-
-**Success Criteria:** ✅ All buttons functional ✅ Calculations correct ✅ Data export works
-
----
-
-### **TASK 10: Data Freshness & Reliability** (60 min)
-**Implementation Details:**
-- Enhanced `DataFreshnessIndicator` with color-coded status
-- Added `data-health.ts` to monitor API latency and errors
-- Updated `smart-cache.ts` for auto-refresh and fallback
-
-**Goal:** Ensure users always know how current their data is
-
-**Files to create/edit:**
-- `src/components/DataFreshness.tsx` (enhance existing)
-- `src/lib/api/data-health.ts` (create)
-- `src/lib/cache/smart-cache.ts` (enhance existing)
-
-**What to build:**
-1. **Freshness Indicators:**
-   - Green: Data <30 seconds old
-   - Yellow: Data 30s-2min old  
-   - Red: Data >2min old
-   - Gray: Using cached/mock data
-
-2. **Health Monitoring:**
-   - API response time tracking
-   - Error rate monitoring
-   - Automatic fallback to backup APIs
-   - Connection status indicators
-
-3. **Smart Refresh:**
-   - Auto-refresh critical data every 30 seconds
-   - Manual refresh button for immediate updates
-   - Refresh rate adjustment based on API limits
-   - Background refresh without UI interruption
-
-**Testing:** Disconnect internet, verify fallback behavior and status indicators
-
-**Success Criteria:** ✅ Freshness status accurate ✅ Fallback works ✅ Auto-refresh functions
-
----
-
-## 🧪 TESTING CHECKPOINTS
-
-After completing every 3 tasks, run this full test sequence:
-
-### Quick Smoke Test (5 min)
-```bash
-npm run dev
-# 1. Dashboard loads without errors
-# 2. Charts render with data
-# 3. Signals appear and update
-# 4. All buttons clickable
-# 5. No console errors
-```
-
-### Signal Accuracy Test (10 min)
-1. Manually refresh data 5 times
-2. Verify signals make logical sense
-3. Check EMA lines match signal direction
-4. Confirm RSI supports signal bias
-5. Validate price targets show 2:1 R:R
-
-### Performance Test (5 min)
-1. Monitor API call frequency (should be <10/min)
-2. Check page load speed (<3 seconds)
-3. Verify smooth chart updates
-4. Test with slow internet connection
-
----
-
-## 📋 TASK COMPLETION STATUS
+(This section can be gradually deprecated or mapped to the new roadmap items as they are completed)
 
 ### ✅ Task 1: Enhanced 5-Minute Candles
 - [x] Basic candle visualization
@@ -456,41 +213,42 @@ npm run dev
 - [ ] Error handling
 - [ ] Offline support
 
-## Next Steps
+---
+## Next Steps (General Project)
 
 1. **Immediate Fixes**
    - Complete integration of market regime detection
-   - Fix failing tests
-   - Implement proper data persistence
+   - Fix failing tests (`market-regime.test.ts`, `indicators.test.ts`)
+   - Implement proper data persistence for performance tracking
 
-2. **Short-term Goals**
-   - Complete performance tracking
-   - Implement quick action panel
-   - Enhance data reliability
+2. **Short-term Goals (Aligned with Profit Roadmap)**
+   - Fully implement all 🏆 and 🎯 tasks from the "Profit-Focused Task Roadmap".
+   - Enhance data reliability and error handling for API calls.
 
 3. **Testing & Optimization**
-   - Add unit tests
-   - Implement integration tests
-   - Optimize performance
+   - Add unit tests for all core signal logic and indicator calculations.
+   - Implement integration tests for the complete signal pipeline.
+   - Optimize UI rendering performance.
 
 4. **Documentation**
-   - Update README
-   - Add JSDoc comments
-   - Create user guide
+   - Update README with any new setup or API considerations.
+   - Add JSDoc comments to all new/modified functions and components.
+   - Create a concise user guide explaining how to interpret signals.
 
-
+---
 **Final Success Criteria:**
-- ✅ Dashboard helps users identify 2-3 daily Bitcoin trading opportunities
-- ✅ All signals include entry, stop loss, and take profit levels
-- ✅ Win rate tracking shows signal accuracy over time
-- ✅ Users can act quickly on profitable setups
-- ✅ No API rate limit violations
-- ✅ Works reliably with mock data offline
-- ✅ Unit tests for volume indicators ensuring spike and confirmation logic
+- ✅ Dashboard helps users identify 2-3 daily Bitcoin trading opportunities.
+- ✅ All signals include clear Entry, Stop Loss, and Take Profit levels.
+- ✅ Win rate tracking (basic) shows signal accuracy over time.
+- ✅ Users can act quickly on profitable setups.
+- ✅ No API rate limit violations (Strict adherence to caching and proxying).
+- ✅ Works reliably with mock data offline.
+- ✅ Unit tests for core signal components (EMA, RSI, Volume, Price Targets, Regime).
 
-**Ready for Production:** When all 10 tasks complete with full testing validation
-- ✅ Unused development files removed (LiveDashboard.tsx.new, LiveDashboard.fixed.tsx, dashboard/page.new.tsx)
+**Ready for Production:** When all 🏆 and 🎯 tasks are complete and validated through testing.
+- ✅ Unused development files removed.
 
+---
 ## Testing Results
 
 ### Current Status
@@ -520,22 +278,22 @@ npm run dev
    - Edge cases with all-rising or all-falling prices
    - Needs better handling of initial periods
 
-### Next Steps
+### Next Steps (Testing & Bug Fixing)
 
 1. **Immediate Fixes (1-2 hours)**
-   - Adjust ADX thresholds for 5-minute timeframe
-   - Fix EMA calculation to match standard implementations
-   - Add more test cases for edge conditions
+   - Adjust ADX thresholds for 5-minute timeframe in `MarketRegimeDetector`.
+   - Review and fix EMA calculation in `src/lib/indicators/moving-averages.ts` to match standard implementations.
+   - Add more test cases for RSI edge conditions in `src/lib/indicators/oscillators.ts`.
 
 2. **Test Coverage (2-3 hours)**
-   - Add unit tests for all indicator functions
-   - Add integration tests for complete signal pipeline
-   - Implement snapshot testing for UI components
+   - Add unit tests for all indicator functions and signal components.
+   - Add integration tests for the complete signal generation pipeline (`getSignal` in `src/lib/signal.ts`).
+   - Implement snapshot testing for key UI components displaying signal data.
 
 3. **Documentation (1 hour)**
-   - Update test documentation
-   - Add comments explaining indicator calculations
-   - Document expected input/output for all functions
+   - Update test documentation with any changes.
+   - Add comments explaining indicator calculations and signal logic.
+   - Document expected input/output for all core functions.
 
 ### How to Run Tests
 ```bash
