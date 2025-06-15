@@ -6,28 +6,59 @@
 
 ---
 
+## 💡 Key Information for Profitable Trading Decisions (User Perspective)
+
+To empower users to make profitable 5-minute Bitcoin trading choices, the dashboard must clearly present the following, derived from the system's analysis:
+
+1.  **Core Signal & Rationale:**
+    *   **Actionable Signal:** Prominent "BUY", "SELL", or "HOLD" status.
+    *   **Signal Confidence:** A percentage indicating the strength of the signal (e.g., "75% Confidence").
+    *   **Reason for Signal:** A concise explanation of the primary drivers (e.g., "EMA Crossover confirmed by Bullish RSI Momentum").
+
+2.  **Market Context:**
+    *   **Current Market Regime:** Clearly display "Strong Trend", "Weak Trend", or "Ranging" to set expectations.
+    *   **Active Strategy:** Briefly state the strategy being applied by the system (e.g., "Trend-Following" or "Mean-Reversion").
+
+3.  **Supporting Indicator Data (Contributors to the Signal):**
+    *   **EMA Status:** e.g., "EMA9 above EMA21".
+    *   **RSI Status:** e.g., "RSI (14): 65 - Bullish Momentum".
+    *   **Volume Insights:** e.g., "Volume: Spike (2.1x average)" or "Volume: Normal".
+    *   **Bollinger Bands:** e.g., "Price near Upper Bollinger Band".
+
+4.  **Trade Execution Parameters (For BUY/SELL Signals):**
+    *   **Signal Entry Price:** The price at which the signal was triggered.
+    *   **Suggested Stop-Loss:** The calculated SL price.
+    *   **Suggested Take-Profit:** The calculated TP price.
+    *   **(Optional) Implied Risk/Reward Ratio:** e.g., "R:R approx 1:2.5".
+
+5.  **Active Trade Management (If a position is open):**
+    *   **Current Position:** "LONG", "SHORT", or "FLAT".
+    *   **Trade Entry Price:** Price of the current open position.
+    *   **Active Stop-Loss:** Current SL for the open position (note if moved to breakeven).
+    *   **Active Take-Profit:** Current TP for the open position.
+    *   **Trade Duration:** How long the current position has been open.
+
+6.  **Data Integrity:**
+    *   **Data Freshness Indicator:** Crucial for 5-minute charts, showing data age and source.
+
+This user-centric view should guide the development and presentation of all dashboard elements.
 ## 📈 Recommended Dashboard Elements
 
 The dashboard should surface the most actionable information at a glance so a
-trader can quickly decide whether to enter or exit a position.  Use these
-components to maximize clarity:
+trader can quickly decide whether to enter or exit a position. Use these
+components to maximize clarity, ensuring they deliver the "Key Information for Profitable Trading Decisions":
 
-- **Market Regime Indicator** – show whether the market is trending or ranging
-  along with ADX values and directional arrows.
-- **5‑Minute Candle Chart** – candlesticks with EMA‑9/EMA‑21 overlays, volume
-  bars and markers for large moves or spikes.
-- **RSI Panel** – display current RSI and highlight overbought or oversold
-  conditions.
-- **Volume Spike Alerts** – notify when volume exceeds 150 % of the recent
-  average.
-- **Price Target Box** – calculate ATR‑based stop loss and take‑profit levels to
-  maintain at least a 2:1 risk/reward ratio.
-- **Data Freshness Indicator** – show the age and source of the data so users
-  know if they are trading on real‑time prices.
-- **Performance Metrics Panel** – track win rate, profit factor and recent trades
-  to evaluate the reliability of generated signals.
-- **Quick Action Buttons** – optional shortcuts for copying trade parameters or
-  executing a mock trade using the current signal.
+- **Central Signal Panel** – Prominently display the current core signal (BUY/SELL/HOLD), its confidence level, and a concise reason (e.g., "EMA Crossover + RSI Confirmation"). This is the primary action hub.
+- **Market Regime Indicator** – Show whether the market is "Strong Trend", "Weak Trend", or "Ranging", and indicate the active trading strategy (e.g., "Trend-Following").
+- **5‑Minute Candle Chart** – Candlesticks with EMA‑9/EMA‑21 overlays, volume bars, and markers for significant price moves or volume spikes. Consider overlaying Bollinger Bands here or in a separate panel.
+- **RSI Panel** – Display current RSI value, its interpretation (e.g., "Bullish Momentum", "Oversold"), and highlight overbought/oversold zones.
+- **Volume Insights Panel** – Show current volume relative to average (e.g., "Spike: 2.1x avg"), and potentially a mini volume trend indicator. This could integrate "Volume Spike Alerts".
+- **Price Target & Risk Panel** – For active BUY/SELL signals, display the signal entry price, calculated stop-loss, take-profit levels, and the implied Risk/Reward ratio (e.g., "R/R: 1:2.5").
+- **Active Trade Status Panel** – If a trade is open, show current position (LONG/SHORT), entry price, active SL/TP (noting if SL moved to breakeven), and trade duration.
+- **Bollinger Bands Display** – Show current price in relation to Bollinger Bands (e.g., "Testing Upper Band"). This could be on the main chart or a dedicated small indicator.
+- **Data Freshness Indicator** – Show the age and source of the data, critical for 5-minute analysis.
+- **Performance Metrics Panel** – Track win rate, profit factor, and recent trade outcomes to evaluate signal reliability.
+- **Quick Action Buttons** – Optional shortcuts for copying trade parameters or executing mock trades.
 
 
 ## 🎯 TASK SEQUENCE FOR JUNIOR DEVELOPERS
@@ -516,4 +547,3 @@ npm test -- market-regime.test.ts
 
 # Run with coverage
 npm test -- --coverage
-```

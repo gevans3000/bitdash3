@@ -1,7 +1,7 @@
 # AGENTS.md – Bitcoin 5-Minute Trading Logic
 
 **Project:** BitDash3 – Lightweight Bitcoin 5-Minute Trading Dashboard  
-**Architecture:** Low code, minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe
+**Architecture:** Low code, minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe must be used within limits of api rate limits   
 
 ---
 
