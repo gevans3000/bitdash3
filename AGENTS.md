@@ -1,155 +1,125 @@
-# AGENTS.md – Bitcoin 5-Minute Trading Logic
+# BitDash3 Agent-Based Architecture
 
-**Project:** BitDash3 – Lightweight Bitcoin 5-Minute Trading Dashboard  
-**Architecture:** Low code, minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe must be used within limits of api rate limits   
-
----
-
-## CORE PHILOSOPHY
-
-**LOW CODE + FAST EXECUTION**
-- Minimal dependencies, maximum efficiency
-- Pure calculation functions without complex frameworks  
-- Client-side processing to minimize server load
-- Real-time WebSocket data with intelligent caching
-- **Target:** Sub-100ms signal generation
+**Project:** BitDash3 – Lean & Profitable 5-Minute Bitcoin Signal Dashboard
+**Core Goal:** Generate clear, actionable BUY/SELL signals for BTC/USDT on the 5-minute chart to aid profitable trading decisions.
 
 ---
 
-## TRADING SYSTEM ARCHITECTURE
+## 🏛️ System Architecture: Event-Driven Agents
 
-### Market Regime Detection (Primary Filter)
-**ADX-Based Regime Classification:**
-- **Trending (ADX > 25):** Use trend-following strategies
-- **Weak Trend (ADX 20-25):** Reduce position confidence  
-- **Ranging (ADX < 20):** Use mean-reversion strategies
+BitDash3 employs an event-driven architecture built around specialized "Agents." These agents are independent modules that communicate by sending messages (events with data) through a central `Orchestrator` (event bus). This design promotes modularity, testability, and a clear flow of data.
 
-### Signal Generation Rules
+### Key Agents & Their Responsibilities:
 
-#### 1. **TRENDING MARKET SIGNALS (ADX > 25)**
-- **Long Entry:** EMA-9 crosses above EMA-21 + RSI(14) > 45 + Volume > 1.5x avg
-- **Short Entry:** EMA-9 crosses below EMA-21 + RSI(14) < 55 + Volume > 1.5x avg
-- **Stop Loss:** 2.5 × ATR(14) from entry
-- **Take Profit:** 2:1 Risk/Reward ratio minimum
+1.  **`Orchestrator` (The Message Manager / Post Office)**
+    *   **Location:** `src/lib/agents/Orchestrator.ts`
+    *   **Responsibility:** Manages the flow of messages between all other agents. Agents register with the Orchestrator to listen for specific message types. When an agent sends a message, the Orchestrator delivers it to all subscribed listeners.
+    *   **Key Interactions:** All agents register with and send messages via the Orchestrator.
 
-#### 2. **RANGING MARKET SIGNALS (ADX < 20)**  
-- **Long Entry:** Price touches lower Bollinger Band + RSI < 30
-- **Short Entry:** Price touches upper Bollinger Band + RSI > 70
-- **Stop Loss:** Beyond opposite Bollinger Band
-- **Take Profit:** Middle Bollinger Band or 1.5:1 R:R
+2.  **`DataCollectorAgent` (The Market Watcher)**
+    *   **Location:** `src/lib/agents/DataCollector.ts`
+    *   **Responsibility:**
+        *   Fetches initial historical 5-minute candle data for BTC/USDT (e.g., from Binance via a proxied API route).
+        *   Connects to the Binance WebSocket for live 5-minute BTC/USDT kline data.
+        *   Processes raw kline data into a standardized `Candle` format.
+        *   Manages a local buffer of recent candles.
+    *   **Publishes Events (via Orchestrator):**
+        *   `INITIAL_CANDLES_5M`: Payload is an array of historical `Candle` objects.
+        *   `LIVE_CANDLE_UPDATE_5M`: Payload is the latest `Candle` object (can be an updating, non-closed candle). Includes an `isClosed` flag.
+        *   `NEW_CLOSED_CANDLE_5M`: Payload is a `Candle` object that has just closed.
+        *   `DATA_STATUS_UPDATE`: Payload indicates the timestamp of the last data activity.
+        *   `DATA_ERROR`: Payload is an error message string if data collection fails.
 
-#### 3. **CONFLUENCE SCORING SYSTEM**
-Award points for signal strength:
-- EMA Crossover: +3 points
-- RSI Confirmation: +2 points  
-- Volume Spike (>150% avg): +2 points
-- Bollinger Band Touch: +2 points
-- **Minimum Score:** 5/9 points to execute trade
+3.  **`IndicatorEngineAgent` (The Analyst Robot)**
+    *   **Location:** `src/lib/agents/IndicatorEngine.ts`
+    *   **Responsibility:**
+        *   Subscribes to `NEW_CLOSED_CANDLE_5M` events.
+        *   Maintains a history of closed candles.
+        *   Calculates a standard set of technical indicators (e.g., EMA(9), EMA(21), RSI(14), Bollinger Bands(20,2), Average Volume(20), ATR) based on the history of closed candles.
+    *   **Publishes Events:**
+        *   `INDICATORS_READY_5M`: Payload is an `IndicatorDataSet` object containing the latest values of all calculated indicators for the closed candle.
 
----
+4.  **`SignalGeneratorAgent` (The Decision Maker)**
+    *   **Location:** `src/lib/agents/SignalGenerator.ts`
+    *   **Responsibility:**
+        *   Subscribes to `INDICATORS_READY_5M` events.
+        *   Uses the received `IndicatorDataSet` to:
+            *   Determine the current `MarketRegime` (e.g., Trending, Ranging) by adapting logic from `src/lib/market/regime-detector.ts`.
+            *   Apply confluence scoring rules (adapting logic from `src/lib/signals/confluence-scorer.ts`) based on indicators and market regime to determine a trading action (BUY, SELL, HOLD), confidence level, and reason.
+            *   Calculate appropriate Stop-Loss (SL) and Take-Profit (TP) levels for BUY/SELL signals (adapting logic from `src/lib/trading/price-targets.ts`, ensuring ATR is available from `IndicatorEngineAgent`).
+        *   Applies a signal cooldown logic.
+    *   **Publishes Events:**
+        *   `NEW_SIGNAL_5M`: Payload is a `TradingSignal` object containing the action, confidence, reason, market regime, entry price, SL, TP, and the raw indicators used.
 
-## EXECUTION FRAMEWORK
-
-### Position Management
-- **Position Size:** 1% account risk using dynamic ATR stops
-- **Max Concurrent Positions:** 1 (simplicity focus)
-- **Trade Frequency:** 2-3 high-confidence signals per day
-- **Session Focus:** US market hours (9 AM - 4 PM EST)
-
-### Risk Controls  
-- **Daily Loss Limit:** -2% account (circuit breaker)
-- **Consecutive Loss Limit:** 3 trades maximum
-- **Time-Based Stop:** Close position after 2 hours if no movement
-- **Volatility Filter:** No trades when ATR > 90th percentile
-
-### Performance Targets
-- **Win Rate:** 55% minimum (realistic for crypto)
-- **Risk/Reward:** 2:1 average
-- **Monthly Returns:** 10-15% target  
-- **Maximum Drawdown:** <10%
-
----
-
-## TECHNICAL IMPLEMENTATION
-
-### Data Sources (Prioritized)
-1. **Binance WebSocket** (primary, real-time)
-2. **Binance REST API** (fallback)  
-3. **CoinGecko API** (backup)
-4. **Mock Data** (development/testing)
-
-### Core Indicators (Lightweight)
-```typescript
-// Minimal, pure calculation functions
-calculateEMA(prices: number[], period: number): number[]
-calculateRSI(prices: number[], period: number): number[]  
-calculateATR(highs: number[], lows: number[], closes: number[]): number[]
-calculateADX(highs: number[], lows: number[], closes: number[]): number
-calculateBollingerBands(prices: number[], period: number): {upper, middle, lower}
-```
-
-### Signal Processing Pipeline
-1. **Data Ingestion:** WebSocket → Normalize → Cache
-2. **Indicator Calculation:** Pure functions, no side effects
-3. **Regime Detection:** ADX classification  
-4. **Signal Generation:** Confluence scoring
-5. **Risk Assessment:** Position sizing + stop calculation
-6. **Execution Decision:** Binary go/no-go output
+5.  **`UIAdapter` (The UI's Data Coordinator)**
+    *   **Location:** `src/lib/agents/UIAdapter.ts`
+    *   **Responsibility:**
+        *   Acts as a bridge between the agent system and the React UI components.
+        *   Subscribes to various events from other agents (`NEW_SIGNAL_5M`, `INITIAL_CANDLES_5M`, `LIVE_CANDLE_UPDATE_5M`, `INDICATORS_READY_5M`, `DATA_STATUS_UPDATE`, `DATA_ERROR`).
+        *   Manages a centralized `AppState` object that holds the latest data needed by the UI.
+        *   Provides a `useAppState` React hook for UI components to easily access and react to state changes.
+        *   Handles logic for triggering browser notifications for high-confidence signals.
+    *   **Key Interactions:** Consumes messages from multiple agents, provides state to all UI components.
 
 ---
+## 📊 Data & Event Flow for a Trading Signal
 
-## DEVELOPMENT PRIORITIES
+1.  **`DataCollectorAgent`** receives a new 5-minute kline from Binance WebSocket.
+2.  If the kline represents a **closed candle**, `DataCollectorAgent` sends a `NEW_CLOSED_CANDLE_5M` message (payload: `Candle`) to the `Orchestrator`.
+3.  `Orchestrator` delivers this message to `IndicatorEngineAgent`.
+4.  **`IndicatorEngineAgent`** updates its candle history and calculates all technical indicators.
+5.  `IndicatorEngineAgent` sends an `INDICATORS_READY_5M` message (payload: `IndicatorDataSet`) to the `Orchestrator`.
+6.  `Orchestrator` delivers this message to `SignalGeneratorAgent`.
+7.  **`SignalGeneratorAgent`** uses the indicators to:
+    *   Detect market regime.
+    *   Apply confluence scoring.
+    *   Calculate SL/TP.
+8.  `SignalGeneratorAgent` sends a `NEW_SIGNAL_5M` message (payload: `TradingSignal`) to the `Orchestrator`.
+9.  `Orchestrator` delivers this message to `UIAdapter`.
+10. **`UIAdapter`** updates its internal `AppState`.
+11. React components using the `useAppState` hook automatically re-render to display the new signal, indicators, and trade parameters.
+12. If the signal is actionable and meets confidence criteria, `UIAdapter` triggers a browser notification.
 
-### Phase 1: Core Engine (Week 1)
-- [x] WebSocket connection + data normalization
-- [x] Basic indicator calculations (EMA, RSI, ATR)
-- [x] Market regime detection UI
-- [ ] Signal generation logic
-- [ ] Position sizing calculator
-
-### Phase 2: Signal Validation (Week 2)  
-- [ ] Confluence scoring system
-- [ ] Backtesting engine (lightweight)
-- [ ] Risk management integration
-- [ ] Alert system
-
-### Phase 3: UI Polish (Week 3)
-- [ ] Signal confidence display
-- [ ] Trade history tracking  
-- [ ] Performance metrics dashboard
-- [ ] Mobile-responsive design
+*Live candle updates for the chart (`LIVE_CANDLE_UPDATE_5M`) and initial candle data (`INITIAL_CANDLES_5M`) also flow from `DataCollectorAgent` via `Orchestrator` to `UIAdapter` to update the chart display directly.*
 
 ---
+## 🎯 Core Trading Logic Principles (To be implemented within Agents)
 
-## TRADING RULES (STRICT ADHERENCE)
+This section outlines the general trading rules that the `SignalGeneratorAgent` should embody through its use of confluence scoring, regime detection, and price target calculations.
 
-1. **NEVER** trade without confluence score ≥5/9 points
-2. **ALWAYS** respect market regime (trend vs range)
-3. **NEVER** risk more than 1% per trade
-4. **ALWAYS** use dynamic ATR-based stops  
-5. **NEVER** add to losing positions
-6. **ALWAYS** take partial profits at 1:1 R:R
-7. **NEVER** trade during major news events
-8. **ALWAYS** stop trading after 3 consecutive losses
+### 1. Market Regime Detection (Influences Strategy)
+*   **Input:** Primarily ADX (calculated by `IndicatorEngineAgent`), potentially other volatility/momentum indicators.
+*   **Output:** `MarketRegime` (e.g., 'Trending-Up', 'Trending-Down', 'Ranging', 'Weak-Trend').
+*   **Logic:** Resides in/adapted from `src/lib/market/regime-detector.ts` and used by `SignalGeneratorAgent`.
+    *   **Trending (e.g., ADX > 25):** Favor trend-following entries (e.g., EMA crossovers).
+    *   **Ranging (e.g., ADX < 20):** Favor mean-reversion entries (e.g., Bollinger Band touches, RSI extremes).
+
+### 2. Signal Confluence (Core of Buy/Sell Decision)
+*   **Input:** `IndicatorDataSet` from `IndicatorEngineAgent`, current `MarketRegime`.
+*   **Logic:** Resides in/adapted from `src/lib/signals/confluence-scorer.ts` and used by `SignalGeneratorAgent`.
+    *   **Example Rules (to be refined in `confluence-scorer.ts`):**
+        *   **Trending Long:** EMA-9 crosses above EMA-21 + RSI(14) > 45 (and not overbought) + Volume confirmation.
+        *   **Trending Short:** EMA-9 crosses below EMA-21 + RSI(14) < 55 (and not oversold) + Volume confirmation.
+        *   **Ranging Long:** Price near lower Bollinger Band + RSI < 30 (oversold).
+        *   **Ranging Short:** Price near upper Bollinger Band + RSI > 70 (overbought).
+    *   **Confidence Scoring:** Assign points/weights to confirming indicators to derive a signal confidence percentage.
+
+### 3. Trade Parameters (Risk Management)
+*   **Input:** Entry Price (current price at signal), Signal Type (BUY/SELL), ATR (from `IndicatorEngineAgent`).
+*   **Logic:** Resides in/adapted from `src/lib/trading/price-targets.ts` and used by `SignalGeneratorAgent`.
+    *   **Stop-Loss:** Typically ATR-based (e.g., 1.5x to 2.5x ATR from entry).
+    *   **Take-Profit:** Aim for a minimum 2:1 Risk/Reward Ratio relative to the Stop-Loss.
 
 ---
+## 🚀 Development Focus (Derived from TASKS.md)
 
-## SUCCESS METRICS
+The primary development focus is to implement the agent pipeline as described above, ensuring each agent correctly processes its inputs and publishes the expected outputs. The `TASKS.md` file provides a detailed, step-by-step guide for this implementation, suitable for a novice developer.
 
-**Code Quality:**
-- Minimal external dependencies
-- <100ms signal generation latency
-- 95%+ uptime WebSocket connection
-- Zero-downtime deployments
+**Key Milestones:**
+1.  **Data Flowing:** `DataCollectorAgent` successfully fetching and publishing live/historical candle data. Basic chart displays this data. Data freshness is visible.
+2.  **Indicators Calculated:** `IndicatorEngineAgent` correctly calculating and publishing all necessary indicators based on closed candles.
+3.  **Signals Generated:** `SignalGeneratorAgent` producing BUY/SELL/HOLD signals with confidence, reasons, market regime, and SL/TP, based on indicators.
+4.  **UI Display:** Dashboard clearly presents all components of the `TradingSignal` and supporting context for decision-making.
+5.  **Alerts Active:** Browser notifications for high-confidence signals.
 
-**Trading Performance:**  
-- 55%+ win rate over 50+ trades
-- 2:1+ average risk/reward
-- <10% maximum drawdown
-- Consistent 8-12% monthly returns
-
-**Development Velocity:**
-- Weekly feature deployments
-- Rapid iteration cycles
-- Minimal technical debt  
-- Self-documenting code
+This agent-based architecture provides a solid foundation for a lean, effective, and maintainable trading signal dashboard.
