@@ -2,9 +2,33 @@
 
 **Mission:** Help users identify 2-3 profitable Bitcoin trading opportunities daily from 5-minute chart analysis
 
-**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits, make ure to use low code and minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe 
+**Development Philosophy:** Mock data by default (`npm run dev`), real APIs only on manual refresh to respect rate limits, make ure to use low code and minimal compute, maximum performance, sole purpose is to generate buy/sell signals for BTC/USDT on the 5-minute timeframe
 
 ---
+
+## 📈 Recommended Dashboard Elements
+
+The dashboard should surface the most actionable information at a glance so a
+trader can quickly decide whether to enter or exit a position.  Use these
+components to maximize clarity:
+
+- **Market Regime Indicator** – show whether the market is trending or ranging
+  along with ADX values and directional arrows.
+- **5‑Minute Candle Chart** – candlesticks with EMA‑9/EMA‑21 overlays, volume
+  bars and markers for large moves or spikes.
+- **RSI Panel** – display current RSI and highlight overbought or oversold
+  conditions.
+- **Volume Spike Alerts** – notify when volume exceeds 150 % of the recent
+  average.
+- **Price Target Box** – calculate ATR‑based stop loss and take‑profit levels to
+  maintain at least a 2:1 risk/reward ratio.
+- **Data Freshness Indicator** – show the age and source of the data so users
+  know if they are trading on real‑time prices.
+- **Performance Metrics Panel** – track win rate, profit factor and recent trades
+  to evaluate the reliability of generated signals.
+- **Quick Action Buttons** – optional shortcuts for copying trade parameters or
+  executing a mock trade using the current signal.
+
 
 ## 🎯 TASK SEQUENCE FOR JUNIOR DEVELOPERS
 
