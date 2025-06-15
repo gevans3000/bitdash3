@@ -2,6 +2,7 @@ import React from 'react';
 import { CandleChart } from '@/components/CandleChart';
 import { MarketRegimeIndicator } from '@/components/MarketRegimeIndicator';
 import PerformanceMetricsPanel from '@/components/dashboard/PerformanceMetricsPanel';
+import BasicCandleDisplay from '@/components/BasicCandleDisplay';
 import dynamic from 'next/dynamic';
 
 // Dynamically import PerformanceMetrics with no SSR since it uses browser APIs
@@ -89,10 +90,16 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        {/* Main chart area */}
+        {/* Main content */}
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border">
             <CandleChart height={600} />
+          </div>
+          
+          {/* Basic Candle Display */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <h2 className="text-lg font-medium mb-3">Basic Candle Display</h2>
+            <BasicCandleDisplay />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

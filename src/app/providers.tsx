@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { AlertManager } from '@/components/AlertManager';
 import { useSignalNotifications } from '@/hooks/useSignalNotifications';
+import { AgentInitializer } from '@/components/AgentInitializer';
 
 /**
  * Providers component that wraps the application with client-side providers
@@ -20,6 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
   
   return (
     <>
+      <AgentInitializer />
       {children}
       <AlertManager position="top-right" />
     </>
