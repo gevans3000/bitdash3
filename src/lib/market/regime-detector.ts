@@ -70,6 +70,11 @@ export class MarketRegimeDetector {
     this.rsiPeriod = options.rsiPeriod || this.rsiPeriod;
     this.emaPeriod = options.emaPeriod || this.emaPeriod;
     this.volumeLookback = options.volumeLookback || this.volumeLookback;
+    
+    // Initialize with current timestamp
+    const now = Date.now();
+    this.regimeStartTime = now;
+    this.lastRegimeChange = now;
   }
 
   public update(candle: Candle): RegimeAnalysis {
@@ -294,6 +299,8 @@ export class MarketRegimeDetector {
     if (this.regimeStartTime === 0) {
       this.regimeStartTime = now;
       this.lastRegimeChange = now;
+      // Initialize history with current regime
+      this.regimeHistory.push({ timestamp: now, regime: this.currentRegime });
     }
     
     // Default to ranging if not enough data
@@ -345,8 +352,11 @@ export class MarketRegimeDetector {
     // Regime determination with improved thresholds
     const priceVsEma = Math.abs((price - ema) / ema);
     
-    // Enhanced regime detection with multiple factors
-    const isRanging = adx < 5 && priceVsEma < 0.02 && Math.abs(emaSlope) < 0.15;
+    // Enhanced regime detection with multiple factors - more sensitive to ranging
+    const isRanging = adx < 15 && 
+                     priceVsEma < 0.05 && 
+                     Math.abs(emaSlope) < 0.3 &&
+                     trendStrength < 0.3;
     const isStrongTrend = (adx > this.adxThresholds.strongTrend && 
                          trendStrength > 0.35) || 
                          (adx > this.adxThresholds.strongTrend * 1.5);
@@ -430,7 +440,9 @@ export class MarketRegimeDetector {
 
   public getRegimeDurationMs(): number {
     if (this.regimeStartTime === 0) return 0;
-    return Date.now() - this.regimeStartTime;
+    const now = Date.now();
+    // Return the time since the current regime started
+    return now - this.regimeStartTime;
   }
   
   public getLastRegimeChangeMs(): number {

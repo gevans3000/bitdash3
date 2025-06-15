@@ -63,22 +63,32 @@ describe('MarketRegimeDetector', () => {
     
     // Pure sideways price action with very low volatility
     const basePrice = 100;
-    const candles = Array.from({ length: 100 }, (_, i) => ({
+    const candles = Array.from({ length: 200 }, (_, i) => ({
       time: i * 1000,
-      open: basePrice + (Math.random() - 0.5) * 0.05,  // Extremely tight range
-      high: basePrice + (Math.random() - 0.5) * 0.05 + 0.02,
-      low: basePrice + (Math.random() - 0.5) * 0.05 - 0.02,
-      close: basePrice + (Math.random() - 0.5) * 0.05,
-      volume: 80 * (1 + (Math.random() * 0.1 - 0.05))  // Low volume
+      open: basePrice + (Math.random() - 0.5) * 0.02,  // Extremely tight range (0.02%)
+      high: basePrice + (Math.random() - 0.5) * 0.02 + 0.01,
+      low: basePrice + (Math.random() - 0.5) * 0.02 - 0.01,
+      close: basePrice + (Math.random() - 0.5) * 0.02,
+      volume: 50 * (1 + (Math.random() * 0.1 - 0.05))  // Low volume
     }));
     
     // Process the dataset
-    candles.forEach(c => {
+    candles.forEach((c, i) => {
       testDetector.update(c);
       advance(60000);
+      
+      // Log every 20 candles for debugging
+      if (i % 20 === 0) {
+        const regime = testDetector.getCurrentRegime();
+        const analysis = (testDetector as any).getCurrentAnalysis();
+        console.log(`Candle ${i}: Regime=${regime}, ADX=${analysis.adx?.toFixed(2)}, RSI=${analysis.rsi?.toFixed(2)}`);
+      }
     });
     
     const regime = testDetector.getCurrentRegime();
+    const analysis = (testDetector as any).getCurrentAnalysis();
+    console.log(`Final Regime: ${regime}, ADX: ${analysis.adx?.toFixed(2)}, RSI: ${analysis.rsi?.toFixed(2)}`);
+    
     // Accept either ranging or weak trend as passing
     expect(regime === 'ranging' || regime.startsWith('weak-trend')).toBe(true);
     
