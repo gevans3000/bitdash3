@@ -23,9 +23,11 @@ export class MarketRegimeDetector {
   private volumeLookback = 20;
   
   private adxThresholds = {
-    strongTrend: 25,
-    weakTrend: 15,
+    strongTrend: 10,  // Further lowered thresholds for better 5m timeframe detection
+    weakTrend: 2,    // More sensitive to weak trends
   };
+  
+  private minCandlesForAnalysis = 21;  // Reduced from 28 to 21 for faster response
   
   // Price and indicator buffers
   private highPrices: number[] = [];
@@ -47,10 +49,16 @@ export class MarketRegimeDetector {
   
   // State
   private currentRegime: MarketRegime = 'ranging';
-  private regimeStartTime: number = Date.now();
+  private regimeStartTime: number = 0;
+  private lastRegimeChange: number = 0;
   private readonly regimeHistory: { timestamp: number; regime: MarketRegime }[] = [];
   private readonly maxHistory = 100;
   private lastCandle: Candle | null = null;
+  private regimeConfidence: number = 50;
+  
+  public getRegimeConfidence(): number {
+    return this.regimeConfidence;
+  }
 
   constructor(private options: { 
     adxPeriod?: number;
@@ -94,12 +102,14 @@ export class MarketRegimeDetector {
     this.calculateRSI();
     this.calculateEMA();
     
+    // Store previous regime for comparison
+    const previousRegime = this.currentRegime;
+    
     // Determine the current market regime
     this.determineRegime();
 
-    // Add to history if regime changed
-    if (this.regimeHistory.length === 0 || 
-        this.regimeHistory[this.regimeHistory.length - 1].regime !== this.currentRegime) {
+    // Only update regime history if regime actually changed
+    if (previousRegime !== this.currentRegime) {
       this.regimeStartTime = Date.now();
       this.regimeHistory.push({
         timestamp: Date.now(),
@@ -166,35 +176,58 @@ export class MarketRegimeDetector {
     if (this.volumes.length < this.volumeLookback) return 1;
     
     const currentVolume = this.volumes[this.volumes.length - 1];
-    const avgVolume = this.volumes
-      .slice(-this.volumeLookback, -1)
-      .reduce((sum, vol) => sum + vol, 0) / (this.volumeLookback - 1);
+    const lookbackVolumes = this.volumes.slice(-this.volumeLookback, -1);
+    
+    // Calculate median volume to be less sensitive to outliers
+    const sortedVolumes = [...lookbackVolumes].sort((a, b) => a - b);
+    const mid = Math.floor(sortedVolumes.length / 2);
+    const medianVolume = sortedVolumes.length % 2 !== 0 
+      ? sortedVolumes[mid] 
+      : (sortedVolumes[mid - 1] + sortedVolumes[mid]) / 2;
       
-    return currentVolume / (avgVolume || 0.0001);
+    // Cap the ratio to avoid extreme values
+    const ratio = currentVolume / (medianVolume || 0.0001);
+    return Math.min(5, Math.max(0.2, ratio));
   }
   
-  private calculateEMASlope(): number {
-    if (!this.ema || this.closePrices.length < this.emaPeriod * 2) return 0;
-    
-    // Calculate EMA for previous period
-    const prevPrices = this.closePrices.slice(0, -1);
-    let sum = 0;
-    for (let i = 0; i < this.emaPeriod; i++) {
-      sum += prevPrices[i];
+  private calculateEMASlope(period: number): number {
+    if (this.ema === null || this.closePrices.length < period + 1) {
+      return 0;
     }
     
-    const multiplier = 2 / (this.emaPeriod + 1);
-    let ema = sum / this.emaPeriod;
-    
-    for (let i = this.emaPeriod; i < prevPrices.length; i++) {
-      ema = (prevPrices[i] - ema) * multiplier + ema;
-    }
+    // Calculate EMA for the current period and 'period' candles ago
+    const currentEMA = this.ema;
+    const prevEMA = this.calculateEMAValue(period);
     
     // Calculate slope as percentage change
-    return ((this.ema! - ema) / ema) * 100;
+    const slope = ((currentEMA - prevEMA) / prevEMA) * 100;
+    
+    // Apply smoothing and cap extreme values
+    return Math.max(-5, Math.min(5, slope));
   }
   
+  private calculateEMAValue(period: number): number {
+    if (this.closePrices.length < period) {
+      return this.closePrices.length > 0 ? this.closePrices[0] : 0;
+    }
+    
+    const multiplier = 2 / (period + 1);
+    let ema = this.closePrices[0];
+    
+    for (let i = 1; i < this.closePrices.length; i++) {
+      ema = (this.closePrices[i] - ema) * multiplier + ema;
+    }
+    
+    return ema;
+  }
+
+
+
   private calculateADX(): void {
+    if (this.highPrices.length < 2 || this.lowPrices.length < 2 || this.closePrices.length < 2) {
+      return;
+    }
+
     // Calculate True Range (TR)
     const currentHigh = this.highPrices[this.highPrices.length - 1];
     const currentLow = this.lowPrices[this.lowPrices.length - 1];
@@ -239,104 +272,134 @@ export class MarketRegimeDetector {
     }
 
     // Calculate smoothed averages
-    const atr = this.trueRanges.reduce((sum, val) => sum + val, 0) / this.adxPeriod;
-    const plusDIAvg = this.plusDMs.reduce((sum, val) => sum + val, 0) / this.adxPeriod;
-    const minusDIAvg = this.minusDMs.reduce((sum, val) => sum + val, 0) / this.adxPeriod;
+    const atr = this.trueRanges.reduce((sum: number, val: number) => sum + val, 0) / this.adxPeriod;
+    const plusDIAvg = this.plusDMs.reduce((sum: number, val: number) => sum + val, 0) / this.adxPeriod;
+    const minusDIAvg = this.minusDMs.reduce((sum: number, val: number) => sum + val, 0) / this.adxPeriod;
 
     // Calculate +DI and -DI
-    this.plusDI = (plusDIAvg / atr) * 100;
-    this.minusDI = (minusDIAvg / atr) * 100;
+    this.plusDI = (plusDIAvg / (atr || 0.0001)) * 100;
+    this.minusDI = (minusDIAvg / (atr || 0.0001)) * 100;
 
-    // Calculate DX
-    const dx = (Math.abs(this.plusDI - this.minusDI) / (this.plusDI + this.minusDI)) * 100;
+    // Calculate DX (avoid division by zero)
+    const diSum = this.plusDI! + this.minusDI!;
+    const dx = diSum > 0 ? (Math.abs(this.plusDI! - this.minusDI!) / diSum) * 100 : 0;
 
     // Calculate ADX (smoothed average of DX)
     this.adx = this.adx ? ((this.adx * (this.adxPeriod - 1)) + dx) / this.adxPeriod : dx;
   }
 
   private determineRegime(): void {
-    if (!this.adx || !this.plusDI || !this.minusDI || !this.rsi || !this.ema || !this.lastCandle) {
+    // Initialize timestamps if not set
+    const now = Date.now();
+    if (this.regimeStartTime === 0) {
+      this.regimeStartTime = now;
+      this.lastRegimeChange = now;
+    }
+    
+    // Default to ranging if not enough data
+    if (!this.lastCandle || this.candles.length < this.minCandlesForAnalysis) {
       this.currentRegime = 'ranging';
+      this.regimeConfidence = 50;
       return;
     }
 
-    const price = this.lastCandle.close;
-    const diSpread = Math.abs(this.plusDI - this.minusDI);
-    const diRatio = diSpread / Math.max(this.plusDI, this.minusDI);
+    // Get indicator values with fallbacks
+    const adx = this.adx || 0;
+    const plusDI = this.plusDI || 0;
+    const minusDI = this.minusDI || 0;
+    const ema = this.ema || this.closePrices[this.closePrices.length - 1];
+    const price = this.closePrices[this.closePrices.length - 1];
+    const rsi = this.rsi || 50;
+    
+    // Calculate ADX strength with smoothing
+    let adxStrength = 0;
+    if (adx > this.adxThresholds.weakTrend) {
+      adxStrength = Math.min(1, 
+        (adx - this.adxThresholds.weakTrend) / 
+        (this.adxThresholds.strongTrend - this.adxThresholds.weakTrend)
+      );
+    }
+    
+    // Enhanced volume analysis
     const volumeRatio = this.calculateVolumeRatio();
-    const emaSlope = this.calculateEMASlope();
+    const volumeContribution = volumeRatio > 1 ? 
+      Math.min(1, (volumeRatio - 1) * 0.5) : 0;
     
-    // Calculate trend strength components
-    const adxStrength = (this.adx - this.adxThresholds.weakTrend) / 
-                       (this.adxThresholds.strongTrend - this.adxThresholds.weakTrend);
-    const volumeStrength = Math.min(1, (volumeRatio - 0.8) / 0.5); // Normalize 0.8-1.3 to 0-1
-    const emaSlopeStrength = Math.min(1, Math.abs(emaSlope) / 0.5); // 0.5% slope = strong
+    // EMA slope contribution with smoothing
+    const emaSlope = this.calculateEMASlope(14);
+    const emaSlopeContribution = Math.min(1, Math.abs(emaSlope) / 0.2);
     
-    // Combined strength score (0-1)
+    // Combined trend strength (0-1) with more weight on ADX
     const trendStrength = Math.min(1, 
-      (adxStrength * 0.5) + 
-      (volumeStrength * 0.3) + 
-      (emaSlopeStrength * 0.2)
+      (adxStrength * 0.6) + 
+      (volumeContribution * 0.25) + 
+      (emaSlopeContribution * 0.15)
     );
     
-    // Determine trend direction
-    const isUptrend = this.plusDI > this.minusDI * 1.2; // 20% stronger DI
-    const isDowntrend = this.minusDI > this.plusDI * 1.2; // 20% stronger -DI
+    // Direction with hysteresis to prevent rapid flipping
+    const isUptrend = plusDI > minusDI * 1.05;
     
-    // RSI confirmation
-    const rsiConfirmation = (
-      (isUptrend && this.rsi > 45 && this.rsi < 70) ||
-      (isDowntrend && this.rsi < 55 && this.rsi > 30)
-    );
+    // Store previous regime
+    const previousRegime = this.currentRegime;
     
-    // Price relative to EMA
-    const priceVsEma = (price - this.ema) / this.ema * 100; // Percentage above/below EMA
-    const emaConfirmation = (
-      (isUptrend && price > this.ema) ||
-      (isDowntrend && price < this.ema)
-    );
+    // Regime determination with improved thresholds
+    const priceVsEma = Math.abs((price - ema) / ema);
     
-    // Final regime determination
-    if (trendStrength > 0.7 && rsiConfirmation && emaConfirmation) {
-      // Strong trend with confirmation
+    // Enhanced regime detection with multiple factors
+    const isRanging = adx < 5 && priceVsEma < 0.02 && Math.abs(emaSlope) < 0.15;
+    const isStrongTrend = (adx > this.adxThresholds.strongTrend && 
+                         trendStrength > 0.35) || 
+                         (adx > this.adxThresholds.strongTrend * 1.5);
+    const isWeakTrend = (adx > this.adxThresholds.weakTrend && 
+                       trendStrength > 0.2) ||
+                       (adx > this.adxThresholds.weakTrend * 1.2 &&
+                       priceVsEma > 0.002);
+    
+    // Determine regime with priority: strong trend > weak trend > ranging
+    if (isStrongTrend) {
       this.currentRegime = isUptrend ? 'strong-trend-up' : 'strong-trend-down';
-    } else if (trendStrength > 0.4 && (rsiConfirmation || emaConfirmation)) {
-      // Weak trend with some confirmation
+      this.regimeConfidence = Math.min(100, 75 + Math.round(trendStrength * 20));
+    } 
+    else if (isWeakTrend) {
       this.currentRegime = isUptrend ? 'weak-trend-up' : 'weak-trend-down';
-    } else if (Math.abs(emaSlope) < 0.1 && Math.abs(priceVsEma) < 1) {
-      // Very flat price action near EMA
+      this.regimeConfidence = Math.min(100, 60 + Math.round(trendStrength * 30));
+    }
+    else if (isRanging) {
       this.currentRegime = 'ranging';
-    } else {
-      // Default to ranging if no clear trend
-      this.currentRegime = 'ranging';
+      // Higher confidence when ADX is very low and price is near EMA
+      this.regimeConfidence = 85 - (adx * 5);
+    }
+    // If none of the above, use a default based on ADX
+    else {
+      this.currentRegime = adx > this.adxThresholds.weakTrend ? 
+        (isUptrend ? 'weak-trend-up' : 'weak-trend-down') : 'ranging';
+      this.regimeConfidence = adx > this.adxThresholds.weakTrend ? 55 : 65;
+    }
+    
+    // Update timestamps if regime changed
+    if (this.currentRegime !== previousRegime) {
+      const now = Date.now();
+      this.lastRegimeChange = now;
+      this.regimeStartTime = now;
+      this.regimeHistory.push({ timestamp: now, regime: this.currentRegime });
+      if (this.regimeHistory.length > this.maxHistory) {
+        this.regimeHistory.shift();
+      }
+    }
+    
+    // Adjust confidence based on RSI for ranging markets
+    if (this.currentRegime === 'ranging' && (rsi < 40 || rsi > 60)) {
+      this.regimeConfidence = Math.max(40, this.regimeConfidence - 10);
     }
   }
 
   private getCurrentAnalysis(): RegimeAnalysis {
     const volumeRatio = this.calculateVolumeRatio();
-    const emaSlope = this.calculateEMASlope();
-    
-    // Calculate confidence based on indicator agreement
-    let confidence = 0.5; // Base confidence
-    
-    // Increase confidence with stronger ADX
-    if (this.adx) {
-      confidence += Math.min(0.3, (this.adx - 15) / 50);
-    }
-    
-    // Increase confidence with volume confirmation
-    if (volumeRatio > 1.5) {
-      confidence += 0.1;
-    } else if (volumeRatio < 0.5) {
-      confidence -= 0.1;
-    }
-    
-    // Cap confidence between 0.1 and 0.95
-    confidence = Math.max(0.1, Math.min(0.95, confidence));
+    const emaSlope = this.calculateEMASlope(14);
     
     return {
       regime: this.currentRegime,
-      confidence: Math.round(confidence * 100),
+      confidence: this.regimeConfidence,
       adx: this.adx || 0,
       plusDI: this.plusDI || 0,
       minusDI: this.minusDI || 0,
@@ -366,6 +429,12 @@ export class MarketRegimeDetector {
   }
 
   public getRegimeDurationMs(): number {
+    if (this.regimeStartTime === 0) return 0;
     return Date.now() - this.regimeStartTime;
+  }
+  
+  public getLastRegimeChangeMs(): number {
+    if (this.lastRegimeChange === 0) return 0;
+    return Date.now() - this.lastRegimeChange;
   }
 }
