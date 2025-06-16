@@ -227,6 +227,13 @@ export class DataCollectorAgent {
           payload: { ...candle, isClosed },
           timestamp: Date.now()
         });
+
+        orchestrator.send<{ lastUpdateTime: number; lastCandleTime: number }>({
+          from: 'DataCollector',
+          type: 'DATA_STATUS_UPDATE',
+          payload: { lastUpdateTime: Date.now(), lastCandleTime: candle.time },
+          timestamp: Date.now()
+        });
         
       } catch (error) {
         console.error('DataCollector: Error processing candle update:', error);

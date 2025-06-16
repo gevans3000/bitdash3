@@ -450,3 +450,15 @@ export class MarketRegimeDetector {
     return Date.now() - this.lastRegimeChange;
   }
 }
+
+export function detectRegime(indicators: import('../agents/types').IndicatorDataSet, candles: Candle[]): import('../agents/types').MarketRegime {
+  if (!indicators.emaFast || !indicators.emaSlow) return 'undefined';
+  const diff = (indicators.emaFast - indicators.emaSlow) / indicators.emaSlow;
+  if (Math.abs(diff) < 0.001) return 'ranging';
+
+  if (indicators.atr && indicators.atr / indicators.currentPrice > 0.02) {
+    return 'volatile';
+  }
+
+  return diff > 0 ? 'trending-up' : 'trending-down';
+}
