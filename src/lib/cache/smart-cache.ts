@@ -16,7 +16,7 @@ export async function smartFetch<T>(
   const { ttl = 60000, maxAge = 0, strategy = 'network-first', source = 'api' } = options;
   const online = typeof navigator === 'undefined' || navigator.onLine;
 
-  const monitoredFetch = () => monitorFetch(source, fetchFn());
+  const monitoredFetch = () => monitorFetch(source, fetchFn);
 
   if (strategy === 'cache-first' || !online) {
     return withCache(key, monitoredFetch, { ttl, maxAge, source });

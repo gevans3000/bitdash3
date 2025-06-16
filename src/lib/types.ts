@@ -7,6 +7,11 @@ export interface Candle {
   low: number;
   close: number;
   volume: number;
+  closeTime: number;
+  quoteAssetVolume: number;
+  trades: number;
+  takerBuyBaseAssetVolume: number;
+  takerBuyQuoteAssetVolume: number;
 }
 
 export interface WebSocketMessage {
@@ -34,14 +39,17 @@ export interface CandleWebSocketData {
 
 export interface OrderBookData {
   lastUpdateId: number;
-  bids: [string, string][];
-  asks: [string, string][];
+  bids: [number, number][];
+  asks: [number, number][];
 }
 
 export interface Trade {
-  id: number;
+  id: string | number;
   price: number;
   qty: number;
   time: number;
   isBuyerMaker: boolean;
+  isBestMatch?: boolean;
+  size?: number; // Add size property
+  side?: 'buy' | 'sell'; // Add side property
 }

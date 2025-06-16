@@ -1,8 +1,7 @@
 import type { Candle, TimeFrame } from './types';
 
 export async function getBinanceCandles(timeFrame: TimeFrame = '5m', limit = 100): Promise<Candle[]> {
-  const base = (process.env.BINANCE_BASE_URL ?? 'https://api.binance.com/api/v3').replace(/\/$/, '');
-  const url = `${base}/klines?symbol=BTCUSDT&interval=${timeFrame}&limit=${limit}`;
+  const url = `/api/binance-proxy/klines?symbol=BTCUSDT&interval=${timeFrame}&limit=${limit}`;
   
   try {
     console.log(`Fetching ${limit} ${timeFrame} candles from Binance...`);
@@ -50,12 +49,17 @@ export async function getBinanceCandles(timeFrame: TimeFrame = '5m', limit = 100
     }
     
     const candles = klines.map((k: any) => ({
-      time: k[0], // Keep as milliseconds for consistency
-      open: +k[1],
-      high: +k[2],
-      low: +k[3],
-      close: +k[4],
-      volume: +k[5],
+      time: Number(k[0]), // Keep as milliseconds for consistency
+      open: Number(k[1]),
+      high: Number(k[2]),
+      low: Number(k[3]),
+      close: Number(k[4]),
+      volume: Number(k[5]),
+      closeTime: Number(k[6]),
+      quoteAssetVolume: Number(k[7]),
+      trades: Number(k[8]),
+      takerBuyBaseAssetVolume: Number(k[9]),
+      takerBuyQuoteAssetVolume: Number(k[10]),
     }));
     
     console.log(`Fetched ${candles.length} candles in ${responseTime}ms`);

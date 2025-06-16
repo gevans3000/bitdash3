@@ -216,15 +216,7 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
       
       {/* Data Freshness Indicator */}
       <div className="mb-6 px-2">
-        <DataFreshnessIndicator
-          lastUpdated={lastUpdated}
-          dataSource={dataSource}
-          cacheKey="market_data_meta"
-          browserCache={browserCache}
-          connectionStatus={connectionStatus}
-          onRefresh={fetchMarketData}
-          className="hover:bg-white/5 px-2 py-1 rounded-md cursor-pointer transition-colors"
-        />
+        <DataFreshnessIndicator />
       </div>
 
       {/* On-Chain Insights and Open Interest */}
@@ -251,7 +243,7 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
               
               {latestTrade && (
                 <div className="text-sm text-white/70">
-                  Last trade: {parseFloat(latestTrade.price).toFixed(2)} ({latestTrade.size} BTC)
+                  Last trade: {latestTrade.price.toFixed(2)} ({latestTrade.qty.toFixed(4)} BTC)
                 </div>
               )}
             </div>
@@ -284,8 +276,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
                   <tbody>
                     {topAsks.map((ask, i) => (
                       <tr key={i} className="text-red-400">
-                        <td className="py-1">${parseFloat(ask[0]).toFixed(2)}</td>
-                        <td className="text-right py-1">{parseFloat(ask[1]).toFixed(4)}</td>
+                        <td className="py-1">${ask[0].toFixed(2)}</td>
+                        <td className="text-right py-1">{ask[1].toFixed(4)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -309,8 +301,8 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
                   <tbody>
                     {topBids.map((bid, i) => (
                       <tr key={i} className="text-green-400">
-                        <td className="py-1">${parseFloat(bid[0]).toFixed(2)}</td>
-                        <td className="text-right py-1">{parseFloat(bid[1]).toFixed(4)}</td>
+                        <td className="py-1">${bid[0].toFixed(2)}</td>
+                        <td className="text-right py-1">{bid[1].toFixed(4)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -340,10 +332,12 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
                 <tbody>
                   {trades.map((trade, i) => (
                     <tr key={i} className={trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}>
-                      <td className="py-1">{new Date(trade.time).toLocaleTimeString()}</td>
-                      <td className="text-right py-1">${parseFloat(trade.price).toFixed(2)}</td>
-                      <td className="text-right py-1">{parseFloat(trade.size).toFixed(4)}</td>
-                      <td className="text-right py-1 capitalize">{trade.side}</td>
+                      <td className="py-1">
+                        {typeof window !== 'undefined' ? new Date(trade.time).toLocaleTimeString() : 'Loading...'}
+                      </td>
+                      <td className="text-right py-1">${trade.price.toFixed(2)}</td>
+                      <td className="text-right py-1">{trade.qty.toFixed(4)}</td>
+                      <td className="text-right py-1 capitalize">{trade.isBuyerMaker ? 'sell' : 'buy'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -377,7 +371,9 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
               <tbody>
                 {displayCandles.slice(-5).map((candle, i) => (
                   <tr key={i} className={candle.close > candle.open ? 'text-green-400' : 'text-red-400'}>
-                    <td className="py-1">{new Date(candle.time * 1000).toLocaleString()}</td>
+                    <td className="py-1">
+                      {typeof window !== 'undefined' ? new Date(candle.time * 1000).toLocaleString() : 'Loading...'}
+                    </td>
                     <td className="text-right py-1">${candle.open.toFixed(2)}</td>
                     <td className="text-right py-1">${candle.high.toFixed(2)}</td>
                     <td className="text-right py-1">${candle.low.toFixed(2)}</td>

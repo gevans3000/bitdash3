@@ -320,7 +320,7 @@ export async function GET(request: Request) {
     try {
       // Fetch candles data with appropriate cache time
       const candlesRes = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`,
+        `/api/binance-proxy/klines?symbol=${symbol}&interval=${interval}&limit=100`,
         { next: { revalidate: interval === '1m' ? 30 : 60 } }
       );
       
