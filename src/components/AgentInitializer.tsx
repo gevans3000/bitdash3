@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { dataCollectorAgent } from '@/lib/agents/DataCollector';
+// Import agent singletons to ensure their constructors run and they register with the orchestrator
+// import { dataCollectorAgent } from '@/lib/agents/DataCollector'; // Original DataCollector, now disabled by commenting out its instance export
+import { indicatorEngineAgent } from '@/lib/agents/IndicatorEngine';
+import { signalGeneratorAgent } from '@/lib/agents/SignalGenerator';
+import { uiAdapter } from '@/lib/agents/UIAdapter';
 import { orchestrator } from '@/lib/agents/Orchestrator';
 
 /**

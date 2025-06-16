@@ -5,6 +5,13 @@ import { AlertManager } from '@/components/AlertManager';
 import { useSignalNotifications } from '@/hooks/useSignalNotifications';
 import { AgentInitializer } from '@/components/AgentInitializer';
 
+// Directly import agent singletons here to ensure their constructors run
+// This is a more forceful way to ensure they are initialized if AgentInitializer component has issues.
+import '@/lib/agents/UIAdapter'; // uiAdapter is used by useAppState, likely already loaded
+import '@/lib/agents/IndicatorEngine'; // Ensures indicatorEngineAgent instance is created
+import '@/lib/agents/SignalGenerator'; // Ensures signalGeneratorAgent instance is created
+// The DataCollectorAgent is intentionally not imported here as it's disabled.
+
 /**
  * Providers component that wraps the application with client-side providers
  */

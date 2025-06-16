@@ -1,3 +1,4 @@
+console.log('IndicatorEngine.ts module loading...'); // ADDED FOR DEBUGGING
 // src/lib/agents/IndicatorEngine.ts
 import { orchestrator } from './Orchestrator';
 import { AgentMessage, AgentName, MessageHandler, IndicatorDataSet } from './types';
@@ -22,25 +23,31 @@ class IndicatorEngineAgent {
   private candles: Candle[] = [];
 
   constructor() {
-    console.log('IndicatorEngineAgent: Constructor called. Subscribing to NEW_CLOSED_CANDLE_5M.');
-    orchestrator.register('NEW_CLOSED_CANDLE_5M', this.onNewClosedCandle.bind(this) as MessageHandler);
-    orchestrator.register('INITIAL_CANDLES_5M', this.handleInitialCandles.bind(this) as MessageHandler);
+    console.log('IndicatorEngineAgent: Constructor called. Subscribing to NEW_CLOSED_CANDLE_5M and INITIAL_CANDLES_5M.');
+    orchestrator.register('NEW_CLOSED_CANDLE_5M', this.onNewClosedCandle.bind(this) as MessageHandler<Candle>);
+    orchestrator.register('INITIAL_CANDLES_5M', this.handleInitialCandles.bind(this) as MessageHandler<Candle[]>);
   }
 
   private handleInitialCandles(msg: AgentMessage<Candle[]>): void {
-    console.log('IndicatorEngineAgent: Received initial candles. Storing for calculations.');
+    console.log(`IndicatorEngineAgent: Received INITIAL_CANDLES_5M with ${msg.payload.length} candles.`);
     this.candles = [...msg.payload].sort((a,b) => a.time - b.time);
     if (this.candles.length > MAX_CANDLE_HISTORY) {
+      console.log(`IndicatorEngineAgent: Initial candles trimmed from ${this.candles.length} to ${MAX_CANDLE_HISTORY}.`);
       this.candles = this.candles.slice(-MAX_CANDLE_HISTORY);
     }
+    console.log(`IndicatorEngineAgent: Stored ${this.candles.length} initial candles.`);
     if (this.candles.length >= MIN_CANDLES_FOR_INDICATORS) {
       const latestCandle = this.candles[this.candles.length -1];
+      console.log('IndicatorEngineAgent: Sufficient initial candles to calculate indicators.');
       this.calculateAndSendIndicators(latestCandle);
+    } else {
+      console.log(`IndicatorEngineAgent: Insufficient initial candles. Need ${MIN_CANDLES_FOR_INDICATORS}, have ${this.candles.length}.`);
     }
   }
 
   private onNewClosedCandle(msg: AgentMessage<Candle>): void {
     const newCandle = msg.payload;
+    console.log(`IndicatorEngineAgent: Received NEW_CLOSED_CANDLE_5M for time ${new Date(newCandle.time).toISOString()}.`);
     const existingIndex = this.candles.findIndex(c => c.time === newCandle.time);
     if (existingIndex === -1) {
       this.candles.push(newCandle);
@@ -50,15 +57,18 @@ class IndicatorEngineAgent {
       }
     } else {
       this.candles[existingIndex] = newCandle;
+      console.log(`IndicatorEngineAgent: Updated existing candle for time ${new Date(newCandle.time).toISOString()}.`);
     }
     this.calculateAndSendIndicators(newCandle);
   }
 
   private calculateAndSendIndicators(triggeringCandle: Candle): void {
+    console.log(`IndicatorEngineAgent: Attempting to calculate indicators. Have ${this.candles.length} candles, need ${MIN_CANDLES_FOR_INDICATORS}.`);
     if (this.candles.length < MIN_CANDLES_FOR_INDICATORS) {
+      console.log('IndicatorEngineAgent: Not enough candle data to calculate indicators.');
       return;
     }
-
+    console.log('IndicatorEngineAgent: Calculating indicators...');
     const emaFast = candleEMA(this.candles, EMA_FAST_PERIOD);
     const emaSlow = candleEMA(this.candles, EMA_SLOW_PERIOD);
     const rsiValues = calculateRSI(this.candles, RSI_PERIOD);
@@ -78,7 +88,8 @@ class IndicatorEngineAgent {
       currentPrice: triggeringCandle.close,
       timestamp: triggeringCandle.time,
     };
-
+    
+    console.log('IndicatorEngineAgent: Sending INDICATORS_READY_5M with payload:', payload);
     orchestrator.send<IndicatorDataSet>({
       from: 'IndicatorEngine' as AgentName,
       type: 'INDICATORS_READY_5M',
@@ -88,3 +99,5 @@ class IndicatorEngineAgent {
   }
 }
 export const indicatorEngineAgent = new IndicatorEngineAgent();
+// Ensure this module is imported in a global context (e.g., _app.tsx or a main layout/provider)
+// for the agent to be instantiated and register itself.

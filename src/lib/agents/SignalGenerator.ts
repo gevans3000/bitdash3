@@ -1,3 +1,4 @@
+console.log('SignalGenerator.ts module loading...'); // ADDED FOR DEBUGGING
 // src/lib/agents/SignalGenerator.ts
 import { orchestrator } from './Orchestrator';
 import { AgentMessage, AgentName, MessageHandler, IndicatorDataSet, TradingSignal, MarketRegime } from './types';
@@ -29,17 +30,18 @@ class SignalGeneratorAgent {
   }
 
   private onIndicatorsReady(msg: AgentMessage<IndicatorDataSet>): void {
+    console.log('SignalGeneratorAgent: Received INDICATORS_READY_5M', msg.payload);
     this.latestIndicators = msg.payload;
-    // console.log("SignalGeneratorAgent: Received new indicators, stored as latestIndicators", this.latestIndicators);
 
     if (!this.latestIndicators.atr) {
       console.warn('SignalGeneratorAgent: ATR is missing from latestIndicators. Cannot calculate SL/TP accurately. Ensure IndicatorEngine provides ATR.');
     }
 
     const newMarketRegime: MarketRegime = detectRegime(this.latestIndicators, this.candleHistory) || 'undefined';
+    console.log(`SignalGeneratorAgent: Detected market regime: ${newMarketRegime}`);
 
     if (newMarketRegime !== this.currentMarketRegime) {
-      // console.log(`SignalGeneratorAgent: Market regime changed from ${this.currentMarketRegime} to ${newMarketRegime}. Emitting event.`);
+      console.log(`SignalGeneratorAgent: Market regime changed from ${this.currentMarketRegime} to ${newMarketRegime}. Emitting MARKET_REGIME_UPDATED event.`);
       this.currentMarketRegime = newMarketRegime;
       orchestrator.send<MarketRegime>({
         from: 'SignalGenerator' as AgentName,
@@ -54,17 +56,15 @@ class SignalGeneratorAgent {
 
   private onMarketRegimeUpdated(msg: AgentMessage<MarketRegime>): void {
     const newMarketRegime = msg.payload;
-    // console.log(`SignalGeneratorAgent: Received MARKET_REGIME_UPDATED event. New regime: ${newMarketRegime}`);
+    console.log(`SignalGeneratorAgent: Received MARKET_REGIME_UPDATED event. New regime: ${newMarketRegime}`);
     
     if (this.latestIndicators) {
-      // Update currentMarketRegime based on the event, as it might come from an external source in the future
       this.currentMarketRegime = newMarketRegime;
-      // console.log("SignalGeneratorAgent: Re-generating signal with latest indicators and new market regime.");
+      console.log("SignalGeneratorAgent: Re-generating signal due to MARKET_REGIME_UPDATED.");
       this.generateSignal(this.latestIndicators, newMarketRegime);
     } else {
-      // console.warn("SignalGeneratorAgent: Market regime updated, but no latest indicators available to generate a signal.");
-      // Store the regime anyway, so the next indicator update uses it.
-      this.currentMarketRegime = newMarketRegime;
+      console.warn("SignalGeneratorAgent: Market regime updated via event, but no latest indicators available to generate a signal.");
+      this.currentMarketRegime = newMarketRegime; // Store for next indicator update
     }
   }
 
@@ -103,7 +103,7 @@ class SignalGeneratorAgent {
       rawIndicators: indicators,
     };
     
-    // console.log("SignalGeneratorAgent: Generated final signal:", finalSignal);
+    console.log("SignalGeneratorAgent: Generated final signal:", finalSignal);
     orchestrator.send<TradingSignal>({
       from: 'SignalGenerator' as AgentName,
       type: 'NEW_SIGNAL_5M',

@@ -30,6 +30,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
   const { candles, regime, currentPrice, isConnected } = useMarketData({
     symbol,
     interval,
+    mockMode: true, // Forcing mockMode for reliable dev signals
   });
   
   const [emaSignals, setEmaSignals] = useState<EMACrossResult | null>(null);
@@ -391,13 +392,15 @@ export const CandleChart: React.FC<CandleChartProps> = ({
 
     // Customize colors based on market regime
     switch (regime) {
-      case 'strong-trend':
+      case 'strong-trend-up':
+      case 'strong-trend-down': // Grouping strong trends for color
         upColor = '#059669';
         downColor = '#DC2626';
         wickUpColor = '#059669';
         wickDownColor = '#DC2626';
         break;
-      case 'weak-trend':
+      case 'weak-trend-up':
+      case 'weak-trend-down': // Grouping weak trends for color
         upColor = '#34D399';
         downColor = '#F87171';
         wickUpColor = '#34D399';

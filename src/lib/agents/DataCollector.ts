@@ -415,11 +415,11 @@ export class DataCollectorAgent {
 }
 
 // Export a singleton instance
-export const dataCollectorAgent = new DataCollectorAgent();
+// export const dataCollectorAgent = new DataCollectorAgent(); // Commented out to prevent auto-initialization / conflict
 
-// Cleanup on page unload
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    dataCollectorAgent.cleanup();
-  });
-}
+// Cleanup on page unload - also commented out as the instance is not created
+// if (typeof window !== 'undefined') {
+//   window.addEventListener('beforeunload', () => {
+//     dataCollectorAgent.cleanup();
+//   });
+// }

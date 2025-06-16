@@ -8,7 +8,8 @@ export type AgentName =
   | 'UI'
   | 'BasicCandleDisplay'
   | 'AgentInitializer'
-  | 'DataFreshnessIndicator';
+  | 'DataFreshnessIndicator'
+  | 'MarketDataHook'; // Added for useMarketData hook
 
 export interface AgentMessage<T = any> {
   from: AgentName;
