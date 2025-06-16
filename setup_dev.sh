@@ -3,6 +3,9 @@
 
 set -euo pipefail
 
+# Always run from this script's directory so npm commands target the repo root
+cd "$(dirname "$0")"
+
 # 1. Ensure Node.js and npm are available
 if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
   echo "Node.js and npm are required. Please install them before continuing." >&2
