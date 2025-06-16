@@ -52,6 +52,7 @@ export interface TradingSignal {
 
 export interface AppState {
   latestSignal: TradingSignal | null;
+  signalHistory: TradingSignal[];
   candlesForChart: Candle[];
   latestIndicators: IndicatorDataSet | null;
   dataStatus: { text: string; color: string; lastUpdateTime: number | null };

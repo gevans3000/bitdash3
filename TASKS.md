@@ -40,22 +40,22 @@ Welcome! This document is your step-by-step guide to building BitDash3. To ensur
 - [x] **Task 2.3**: Implement Position Sizer - *Completed 2025-06-16*
 - [x] **Task 2.4**: Implement Strategy Switcher - *Completed 2025-06-16*
 
-### Phase 3: 🧠 Signal Generation & Core UI Display - IN PROGRESS 🔄
+### Phase 3: 🧠 Signal Generation & Core UI Display - COMPLETED ✅
 - [x] **Task 3.1**: Implement SignalGenerator Agent - *Completed 2025-06-16*
 - [x] **Task 3.2**: Implement TradingSignalPanel - *Completed 2025-06-16*
-- [ ] **Task 3.3**: Integrate Signal History Display
-- [ ] **Task 3.4**: Add Real-time Signal Updates
+- [x] **Task 3.3**: Integrate Signal History Display - *Completed 2025-06-16*
+- [x] **Task 3.4**: Add Real-time Signal Updates - *Completed 2025-06-16*
 
-### Phase 4: ⚡ Actionability & Optimization
-- [ ] **Task 4.1**: Implement Signal Alerts
-- [ ] **Task 4.2**: Performance Tracking UI
-- [ ] **Task 4.3**: Quick Action Panel
+### Phase 4: ⚡ Actionability & Optimization - IN PROGRESS 🔄
+- [x] **Task 4.1**: Implement Signal Alerts - *Completed 2025-06-16*
+- [x] **Task 4.2**: Performance Tracking UI - *Completed 2025-06-16*
+- [x] **Task 4.3**: Quick Action Panel - *Completed 2025-06-16*
 
 ### Known Issues to Address:
-- [ ] Replace SignalsDisplay with TradingSignalPanel in LiveDashboard.tsx
-- [ ] Refactor signal.ts to use StrategyAutomaticSwitcher
+- [x] Replace SignalsDisplay with TradingSignalPanel in LiveDashboard.tsx
+- [x] Refactor signal.ts to use StrategyAutomaticSwitcher
 - [ ] Add error boundaries and fallback states
-- [ ] Complete signal history display integration
+- [x] Complete signal history display integration
 - [ ] Add regime change triggers for signal updates
 
 ---

@@ -1,53 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAppState } from '@/hooks/useAppState';
+import { TradingSignal } from '@/lib/agents/types';
 
-type SignalAction = 'BUY' | 'SELL' | 'HOLD';
-
-interface Signal {
-  action: SignalAction;
-  confidence: number;
-  reason: string;
-  timestamp: number;
-}
+type SignalAction = TradingSignal['action'];
 
 interface TradingSignalPanelProps {
   className?: string;
 }
 
-// Static mock data for testing
-const mockSignals: Signal[] = [
-  { action: 'BUY', confidence: 78, reason: 'Strong uptrend with high volume', timestamp: Date.now() - 300000 },
-  { action: 'HOLD', confidence: 65, reason: 'Consolidation phase', timestamp: Date.now() - 180000 },
-  { action: 'SELL', confidence: 82, reason: 'Bearish divergence detected', timestamp: Date.now() - 60000 },
-];
-
 export function TradingSignalPanel({ className = '' }: TradingSignalPanelProps) {
-  const [currentSignal, setCurrentSignal] = useState<Signal>(mockSignals[0]);
-  const [signalHistory, setSignalHistory] = useState<Signal[]>(mockSignals);
+  const { latestSignal, signalHistory } = useAppState();
+  const [history, setHistory] = useState<TradingSignal[]>(signalHistory);
 
-  // Simple rotation through mock signals every 10 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newSignal: Signal = {
-        action: ['BUY', 'SELL', 'HOLD'][Math.floor(Math.random() * 3)] as SignalAction,
-        confidence: 60 + Math.floor(Math.random() * 30),
-        reason: [
-          'Strong momentum detected',
-          'RSI oversold condition',
-          'Support level holding',
-          'Volume confirmation',
-          'Trend reversal signal'
-        ][Math.floor(Math.random() * 5)],
-        timestamp: Date.now()
-      };
-      
-      setCurrentSignal(newSignal);
-      setSignalHistory(prev => [newSignal, ...prev.slice(0, 4)]);
-    }, 10000);
+    if (latestSignal) {
+      setHistory(prev => [latestSignal, ...prev].slice(0, 5));
+    }
+  }, [latestSignal]);
 
-    return () => clearInterval(interval);
-  }, []);
+  const currentSignal = latestSignal || history[0];
 
   const getSignalColor = (action: SignalAction) => {
     switch (action) {
@@ -87,11 +60,11 @@ export function TradingSignalPanel({ className = '' }: TradingSignalPanelProps) 
       </div>
 
       {/* Signal History */}
-      {signalHistory.length > 1 && (
+      {history.length > 1 && (
         <div className="mt-4">
           <h4 className="text-sm font-medium text-gray-400 mb-2">Recent Signals</h4>
           <div className="space-y-1">
-            {signalHistory.slice(1, 4).map((signal, index) => (
+            {history.slice(1, 4).map((signal, index) => (
               <div key={`${signal.timestamp}-${index}`} className="text-xs p-2 rounded bg-gray-800/30">
                 <div className="flex justify-between">
                   <span className={`font-medium ${
