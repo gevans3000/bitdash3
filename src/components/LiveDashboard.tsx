@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useAppState } from '@/hooks/useAppState'; // Added
 import { Candle, OrderBookData, Trade } from '@/lib/types';
 import { TradingSignalPanel } from './TradingSignalPanel';
 import OnChainInsightsPanel from './OnChainInsightsPanel';
@@ -40,8 +41,10 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   
   // Loading state
   const [loading, setLoading] = useState(false);
-  const connectionStatus = useConnectionStatus();
-  
+  // const connectionStatus = useConnectionStatus(); // Already in useAppState via UIAdapter's dataStatus
+  const appState = useAppState(); // Added
+  const { currentPrice: appStateCurrentPrice, candlesForChart: appStateCandles } = appState; // Added
+
   // Track initialization status
   const initialized = useRef(false);
   
@@ -166,23 +169,30 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   }, [refreshTrigger]);
   
   // Ensure we always have a valid array for candles, even if empty
-  const displayCandles = candles.length > 0 ? candles : [];
+  // Use candles from AppState for consistency if available, otherwise fallback to local `candles` state.
+  const displayCandles = appStateCandles.length > 0 ? appStateCandles : candles;
   
-  // Show latest price from candles
-  const latestPrice = displayCandles.length > 0
-    ? displayCandles[displayCandles.length - 1].close
-    : null;
+  // Use currentPrice from AppState as the primary source.
+  // Fallback to calculating from displayCandles if appStateCurrentPrice is null.
+  const latestPrice = appStateCurrentPrice !== null
+    ? appStateCurrentPrice
+    : (displayCandles.length > 0 ? displayCandles[displayCandles.length - 1].close : null);
 
   const handleBacktest = (opts: { candles: Candle[]; preset: string }) => {
-    if (opts.candles.length === 0) return;
-    const result = runBacktest({ candles: opts.candles });
+    // Prefer appStateCandles for backtesting if populated, otherwise use candles from opts.
+    const candlesForBacktest = appStateCandles.length > 0 ? appStateCandles : opts.candles;
+    if (candlesForBacktest.length === 0) {
+        console.warn("Backtest attempted with no candles.");
+        return;
+    }
+    const result = runBacktest({ candles: candlesForBacktest });
     setBacktestResult(result);
   };
   
-  // Get latest trade data
+  // Get latest trade data (uses local `trades` state, which is fine for now)
   const latestTrade = trades.length > 0 ? trades[0] : null;
   
-  // Extract top 5 bids and asks
+  // Extract top 5 bids and asks (uses local `orderBook` state, fine for now)
   const effectiveOrderBook = orderBook || null;
   const topBids = effectiveOrderBook?.bids?.slice(0, 5) || [];
   const topAsks = effectiveOrderBook?.asks?.slice(0, 5) || [];

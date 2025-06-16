@@ -8,6 +8,7 @@ import { subscribeToCandleUpdates } from '@/lib/binance-websocket';
 const SYMBOL = 'BTCUSDT';
 const INTERVAL = '5m';
 const HISTORICAL_LIMIT = 100;
+const REFRESH_LIMIT = 30; // Added: Number of recent candles to fetch on manual refresh
 const BUFFER_MAX = 200;
 
 export class DataCollectorAgent {
@@ -21,20 +22,23 @@ export class DataCollectorAgent {
     console.log('DataCollector: Constructor called');
     // Bind methods
     this.handleInitialDataRequest = this.handleInitialDataRequest.bind(this);
+    this.handleManualDataRefreshRequest = this.handleManualDataRefreshRequest.bind(this); // Added
     
     // Register message handlers
     orchestrator.register('REQUEST_INITIAL_DATA', this.handleInitialDataRequest);
+    orchestrator.register('MANUAL_DATA_REFRESH_REQUEST', this.handleManualDataRefreshRequest);
     
-    // Start initialization but don't wait for it
-    if (!this.initializationPromise) {
-      this.initializationPromise = this.initialize();
-      
-      // Log any initialization errors
-      this.initializationPromise.catch(error => {
-        console.error('DataCollector: Initialization failed:', error);
-        this.initializationPromise = null; // Allow retries
-      });
-    }
+    // REMOVED: Do not auto-initialize on construction.
+    // Initialization will now be triggered by MANUAL_DATA_REFRESH_REQUEST.
+    // if (!this.initializationPromise) {
+    //   this.initializationPromise = this.initialize();
+    //
+    //   // Log any initialization errors
+    //   this.initializationPromise.catch(error => {
+    //     console.error('DataCollector: Initialization failed:', error);
+    //     this.initializationPromise = null; // Allow retries
+    //   });
+    // }
   }
 
   public async ensureInitialized(): Promise<void> {
@@ -56,21 +60,18 @@ export class DataCollectorAgent {
   private async handleInitialDataRequest() {
     console.log('DataCollector: Received REQUEST_INITIAL_DATA');
     
-    try {
-      // Ensure we're initialized
-      await this.ensureInitialized();
-      
-      // If we have data, send it
-      if (this.candleBuffer.length > 0) {
-        console.log('DataCollector: Sending initial candles');
-        this.notifyInitialCandles();
-      } else {
-        console.log('DataCollector: No data available to send');
-      }
-    } catch (error) {
-      console.error('DataCollector: Error handling initial data request:', error);
-      this.handleError(error, 'handling initial data request');
+    // IMPORTANT CHANGE: Only send data if already initialized. Do NOT trigger initialization here.
+    // Initialization is now solely triggered by MANUAL_DATA_REFRESH_REQUEST.
+    if (this.isInitialized && this.candleBuffer.length > 0) {
+      console.log('DataCollector: Already initialized and has data, sending initial candles in response to REQUEST_INITIAL_DATA.');
+      this.notifyInitialCandles();
+    } else if (this.isInitialized && this.candleBuffer.length === 0) {
+      console.log('DataCollector: Initialized but no candle data in buffer to send for REQUEST_INITIAL_DATA.');
     }
+     else {
+      console.log('DataCollector: Not yet initialized. Ignoring REQUEST_INITIAL_DATA. Waiting for user to trigger refresh.');
+    }
+    // No try-catch needed here anymore as we are not calling ensureInitialized which could throw.
   }
 
   private async initialize(): Promise<void> {
@@ -234,6 +235,137 @@ export class DataCollectorAgent {
     } catch (error) {
       console.error('DataCollector: Error in handleNewCandle:', error);
       this.handleError(error, 'Failed to handle new candle');
+    }
+  }
+
+  private async handleManualDataRefreshRequest(): Promise<void> {
+    console.log('DataCollector: Received MANUAL_DATA_REFRESH_REQUEST');
+    
+    // If not initialized, run full initialization. Otherwise, just refresh recent data.
+    if (!this.isInitialized || !this.initializationPromise) {
+      console.log('DataCollector: Not initialized, running full initialization via refresh request.');
+      orchestrator.send({
+        from: 'DataCollector',
+        type: 'DATA_STATUS_UPDATE',
+        payload: { text: 'Initializing data via refresh...', color: 'text-yellow-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+        timestamp: Date.now()
+      });
+      try {
+        // Ensure any previous failed promise is cleared
+        this.initializationPromise = null;
+        await this.ensureInitialized(); // This will call this.initialize()
+         orchestrator.send({
+          from: 'DataCollector',
+          type: 'DATA_STATUS_UPDATE',
+          payload: { text: 'Data initialized', color: 'text-green-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        console.error('DataCollector: Error during initial data load triggered by refresh:', error);
+        // handleError is called within initialize() or ensureInitialized()
+        orchestrator.send({
+          from: 'DataCollector',
+          type: 'DATA_STATUS_UPDATE',
+          payload: { text: 'Initialization failed', color: 'text-red-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+          timestamp: Date.now()
+        });
+      }
+    } else {
+      console.log('DataCollector: Already initialized, fetching recent candles for refresh.');
+      orchestrator.send({
+        from: 'DataCollector',
+        type: 'DATA_STATUS_UPDATE',
+        payload: { text: 'Refreshing data...', color: 'text-yellow-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+        timestamp: Date.now()
+      });
+      try {
+        // Ensure WebSocket is active or try to reconnect
+        // setupWebSocket is part of initialize, but we might want to ensure it's connected
+        // without re-fetching all historical data if already initialized.
+        // For simplicity now, initialize() handles this. If more granular control is needed,
+        // binanceWebSocket.connect() could be called directly here.
+        // For now, let's assume ensureInitialized or a direct call to fetchRecentCandles + WS check is enough.
+
+        // Re-establish WebSocket connection if needed (setupWebSocket also connects)
+        // This might be redundant if initialize() is robust, but good for explicit refresh.
+        if (this.unsubscribeWS) { // If there was a subscription, try to set it up again.
+             this.setupWebSocket();
+        } else { // If never subscribed (e.g. initial init failed before WS setup), try full init.
+            await this.ensureInitialized(); // This will attempt to setup websocket if not done.
+        }
+
+
+        // Fetch a small number of recent candles
+        await this.fetchRecentCandles();
+
+        // Notify that data has been refreshed
+        orchestrator.send({
+          from: 'DataCollector',
+          type: 'INITIAL_CANDLES_5M',
+          payload: [...this.candleBuffer],
+          timestamp: Date.now()
+        });
+        orchestrator.send({
+          from: 'DataCollector',
+          type: 'DATA_STATUS_UPDATE',
+          payload: { text: 'Data refreshed', color: 'text-green-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+          timestamp: Date.now()
+        });
+
+      } catch (error) {
+        console.error('DataCollector: Error handling manual data refresh:', error);
+        this.handleError(error, 'handling manual data refresh');
+        orchestrator.send({
+          from: 'DataCollector',
+          type: 'DATA_STATUS_UPDATE',
+          payload: { text: 'Refresh failed', color: 'text-red-400', lastUpdateTime: Date.now(), lastCandleTime: this.lastCandleTime },
+          timestamp: Date.now()
+        });
+      }
+    }
+  }
+
+  private async fetchRecentCandles(): Promise<void> {
+    console.log('DataCollector: Fetching recent candles for refresh...');
+    try {
+      const recentCandles = await getBinanceCandles(INTERVAL, REFRESH_LIMIT);
+      if (!Array.isArray(recentCandles)) {
+        throw new Error('Expected array of recent candles but got: ' + typeof recentCandles);
+      }
+
+      console.log(`DataCollector: Loaded ${recentCandles.length} recent candles for refresh`);
+      
+      // Merge recent candles into the buffer
+      // This simple merge assumes recentCandles might overlap or be newer
+      // A more sophisticated merge might be needed depending on exact data guarantees
+      const existingTimes = new Set(this.candleBuffer.map(c => c.time));
+      recentCandles.forEach(newCandle => {
+        if (!existingTimes.has(newCandle.time)) {
+          this.candleBuffer.push(newCandle);
+        } else {
+          // Update if existing
+          const index = this.candleBuffer.findIndex(c => c.time === newCandle.time);
+          if (index !== -1) {
+            this.candleBuffer[index] = newCandle;
+          }
+        }
+      });
+
+      this.candleBuffer.sort((a, b) => a.time - b.time);
+
+      // Keep buffer size in check
+      while (this.candleBuffer.length > BUFFER_MAX) {
+        this.candleBuffer.shift();
+      }
+
+      if (this.candleBuffer.length > 0) {
+        this.lastCandleTime = this.candleBuffer[this.candleBuffer.length - 1].time;
+      }
+      // No explicit notification here, handled by handleManualDataRefreshRequest after this call
+    } catch (error) {
+      console.error('DataCollector: Error fetching recent candles:', error);
+      this.handleError(error, 'Failed to fetch recent candles');
+      throw error; // Re-throw to be caught by the caller
     }
   }
 

@@ -8,6 +8,7 @@ const initialAppState: AppState = {
   signalHistory: [],
   candlesForChart: [],
   latestIndicators: null,
+  currentPrice: null, // Added
   dataStatus: { text: 'Initializing...', color: 'grey', lastUpdateTime: null },
   dataError: null,
 };
@@ -42,9 +43,14 @@ class UIAdapterService {
       }
     }) as MessageHandler);
 
-    orchestrator.register('INITIAL_CANDLES_5M', ((msg: AgentMessage<Candle[]>) =>
-      this.updateState(s => ({ ...s, candlesForChart: msg.payload.slice(-200) }))
-    ) as MessageHandler);
+    orchestrator.register('INITIAL_CANDLES_5M', ((msg: AgentMessage<Candle[]>) => {
+      const candles = msg.payload;
+      this.updateState(s => ({
+        ...s,
+        candlesForChart: candles.slice(-200),
+        currentPrice: candles.length > 0 ? candles[candles.length - 1].close : s.currentPrice
+      }));
+    }) as MessageHandler);
 
     orchestrator.register('LIVE_CANDLE_UPDATE_5M', ((msg: AgentMessage<Candle & {isClosed: boolean}>) => {
       const candle = msg.payload;
@@ -53,10 +59,27 @@ class UIAdapterService {
         const idx = newCandles.findIndex(c => c.time === candle.time);
         if (idx !== -1) newCandles[idx] = candle;
         else newCandles.push(candle);
-        return { ...s, candlesForChart: newCandles.sort((a,b) => a.time - b.time).slice(-200) };
+        // currentPrice is NO LONGER updated here by live updates.
+        // It will only be updated by INITIAL_CANDLES_5M (on initial load and manual refresh).
+        // We still update candlesForChart for other potential uses, or this could also be restricted.
+        // For true "only refresh button updates price AND chart", candlesForChart update should also move
+        // to be exclusively within INITIAL_CANDLES_5M handler.
+        // For now, only restricting currentPrice update.
+        return {
+          ...s,
+          candlesForChart: newCandles.sort((a,b) => a.time - b.time).slice(-200)
+          // currentPrice: candle.close // REMOVED
+        };
       });
       return undefined; // Explicit return to match MessageHandler type
     }) as MessageHandler);
+
+    // Also handle NEW_CLOSED_CANDLE_5M if it's a distinct event that UIAdapter listens to
+    // Assuming for now LIVE_CANDLE_UPDATE_5M covers the necessary updates for currentPrice
+    // If NEW_CLOSED_CANDLE_5M is also registered and provides Candle payload, add:
+    // orchestrator.register('NEW_CLOSED_CANDLE_5M', ((msg: AgentMessage<Candle>) => {
+    //   this.updateState(s => ({ ...s, currentPrice: msg.payload.close }));
+    // }) as MessageHandler);
 
     orchestrator.register('INDICATORS_READY_5M', ((msg: AgentMessage<IndicatorDataSet>) =>
       this.updateState(s => ({ ...s, latestIndicators: msg.payload }))

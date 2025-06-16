@@ -12,7 +12,7 @@ export type AgentName =
 
 export interface AgentMessage<T = any> {
   from: AgentName;
-  type: string; // e.g., 'LIVE_CANDLE_UPDATE_5M', 'INDICATORS_READY_5M'
+  type: string; // e.g., 'LIVE_CANDLE_UPDATE_5M', 'INDICATORS_READY_5M', 'MANUAL_DATA_REFRESH_REQUEST', 'MARKET_REGIME_UPDATED'
   payload: T;
   timestamp: number;
 }
@@ -55,6 +55,7 @@ export interface AppState {
   signalHistory: TradingSignal[];
   candlesForChart: Candle[];
   latestIndicators: IndicatorDataSet | null;
+  currentPrice: number | null; // Added for the current price display
   dataStatus: { text: string; color: string; lastUpdateTime: number | null };
   dataError: string | null;
 }

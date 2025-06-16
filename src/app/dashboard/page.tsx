@@ -5,6 +5,7 @@ import PerformanceMetricsPanel from '@/components/dashboard/PerformanceMetricsPa
 import BasicCandleDisplay from '@/components/BasicCandleDisplay';
 import DataFreshnessIndicator from '@/components/DataFreshnessIndicator';
 import SignalDisplay from '@/components/SignalDisplay';
+import ErrorBoundary from '@/components/ErrorBoundary'; // Added ErrorBoundary import
 import dynamic from 'next/dynamic';
 
 // Dynamically import PerformanceMetrics with no SSR since it uses browser APIs
@@ -21,12 +22,24 @@ export default function DashboardPage() {
         <p className="text-gray-600">Real-time market analysis and signals</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left sidebar */}
-        <div className="space-y-6">
-          <MarketRegimeIndicator />
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
+      <ErrorBoundary fallbackRender={(error, errorInfo) => (
+        <div role="alert" className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          <p className="font-bold">Dashboard Error:</p>
+          <p>{error.message}</p>
+          <details className="text-sm">
+            <summary>Details</summary>
+            <pre>{errorInfo?.componentStack}</pre>
+          </details>
+        </div>
+      )}>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left sidebar */}
+          <div className="space-y-6">
+            <ErrorBoundary fallbackRender={(error) => <p>Market Regime Indicator Failed: {error.message}</p>}>
+              <MarketRegimeIndicator />
+            </ErrorBoundary>
+            
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Trading Signals</h3>
             <div className="space-y-2">
               <div className="p-3 bg-green-50 border border-green-100 rounded">
@@ -94,18 +107,24 @@ export default function DashboardPage() {
         
         {/* Main content */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <CandleChart height={600} />
-          </div>
+          <ErrorBoundary fallbackRender={(error) => <p>Candle Chart Failed: {error.message}</p>}>
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <CandleChart height={600} />
+            </div>
+          </ErrorBoundary>
 
-          <DataFreshnessIndicator />
-          <SignalDisplay />
+          <ErrorBoundary fallbackRender={(error) => <p>Data Freshness/Signal Display Failed: {error.message}</p>}>
+            <DataFreshnessIndicator />
+            <SignalDisplay />
+          </ErrorBoundary>
 
           {/* Basic Candle Display */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-medium mb-3">Basic Candle Display</h2>
-            <BasicCandleDisplay />
-          </div>
+          <ErrorBoundary fallbackRender={(error) => <p>Basic Candle Display Failed: {error.message}</p>}>
+            <div className="bg-white p-4 rounded-lg shadow-sm border">
+              <h2 className="text-lg font-medium mb-3">Basic Candle Display</h2>
+              <BasicCandleDisplay />
+            </div>
+          </ErrorBoundary>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-lg shadow-sm border">
@@ -176,6 +195,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      </ErrorBoundary>
       
       <footer className="mt-8 text-center text-xs text-gray-500">
         <p>BitDash3 Trading Dashboard - Real-time market data powered by Binance WebSocket API</p>

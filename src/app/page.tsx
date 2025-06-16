@@ -3,11 +3,23 @@
 import LiveDashboard from '@/components/LiveDashboard';
 import MarketChart from '@/components/MarketChart';
 import { useState } from 'react';
+import { orchestrator } from '@/lib/agents/Orchestrator'; // Added
 
 export default function Page() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // This might become redundant or be used differently
   
   const handleRefresh = () => {
+    // setRefreshTrigger(Date.now()); // Keep or remove depending on how LiveDashboard uses it for non-agent data
+    
+    // Dispatch event to agent system
+    orchestrator.send({
+      from: 'UI', // Or 'PageHeader'
+      type: 'MANUAL_DATA_REFRESH_REQUEST',
+      payload: null,
+      timestamp: Date.now(),
+    });
+    
+    // If refreshTrigger is still used by LiveDashboard for other data (non-candle, non-price), keep this:
     setRefreshTrigger(Date.now());
   };
   return (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+// import { orchestrator } from '@/lib/agents/Orchestrator'; // No longer dispatching from here
 import { calculatePositionSize } from '@/lib/calculators/price-targets';
 import { executeMockBuy, executeMockSell } from '@/lib/trading/quick-trades';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ export default function QuickActionPanel({ latestPrice = 0, className = '' }: Qu
   const [feesPct, setFeesPct] = useState<number>(0.1);
   const [alertPrice, setAlertPrice] = useState<number>(latestPrice || 0);
   const [openTradeId, setOpenTradeId] = useState<string | null>(null);
+  // Removed const { orchestrator } = useAppState();
 
   useEffect(() => {
     if (latestPrice) {
@@ -121,6 +123,15 @@ export default function QuickActionPanel({ latestPrice = 0, className = '' }: Qu
     }
   };
 
+  // This handleRefreshData function for the QuickActionPanel's button
+  // will NOT dispatch the MANUAL_DATA_REFRESH_REQUEST for currentPrice,
+  // as per the new requirement that only the main page refresh button does that.
+  // It can be left to do nothing, or be repurposed later.
+  const handleRefreshData = () => {
+    console.log('QuickActionPanel Refresh Data button clicked - currently does not update main current price.');
+    // orchestrator.send({ ... }); // REMOVED - This button no longer updates the main current price
+  };
+
   const inputClass = 'bg-neutral-800 rounded px-2 py-1 text-sm';
 
   return (
@@ -174,6 +185,7 @@ export default function QuickActionPanel({ latestPrice = 0, className = '' }: Qu
       <div className="grid grid-cols-2 gap-2 text-sm">
         <button onClick={executeBuy} className="bg-green-600 hover:bg-green-700 rounded px-2 py-1">BUY</button>
         <button onClick={executeSell} className="bg-red-600 hover:bg-red-700 rounded px-2 py-1">SELL</button>
+        <button onClick={handleRefreshData} className="col-span-2 bg-teal-600 hover:bg-teal-700 rounded px-2 py-1">Refresh Data (Panel)</button> {/* Text changed to differentiate if needed */}
         <button onClick={setPriceAlert} className="col-span-2 bg-yellow-600 hover:bg-yellow-700 rounded px-2 py-1">Set Price Alert</button>
         <button onClick={exportData} className="col-span-2 bg-blue-600 hover:bg-blue-700 rounded px-2 py-1">Export Data</button>
         <button onClick={copyToClipboard} className="col-span-2 bg-neutral-600 hover:bg-neutral-700 rounded px-2 py-1">Copy</button>

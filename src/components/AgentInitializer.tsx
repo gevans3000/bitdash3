@@ -12,27 +12,38 @@ export function AgentInitializer() {
   useEffect(() => {
     console.log('AgentInitializer: Mounted, initializing agents...');
     
-    // Initialize the DataCollector agent
-    const initializeDataCollector = async () => {
-      try {
-        console.log('AgentInitializer: Initializing DataCollector...');
-        await dataCollectorAgent.ensureInitialized();
-        console.log('AgentInitializer: DataCollector initialized successfully');
-        
-        // Request initial data
-        console.log('AgentInitializer: Requesting initial data...');
-        orchestrator.send({
-          from: 'AgentInitializer',
-          type: 'REQUEST_INITIAL_DATA',
-          payload: {},
-          timestamp: Date.now()
-        });
-      } catch (error) {
-        console.error('AgentInitializer: Failed to initialize DataCollector:', error);
-      }
-    };
-    
-    initializeDataCollector();
+    // DataCollectorAgent initialization is now deferred until MAN MANUAL_DATA_REFRESH_REQUEST (main refresh button).
+    // We will still send REQUEST_INITIAL_DATA, and DataCollectorAgent will respond if it's already been initialized.
+    // const initializeDataCollector = async () => { // Entire block commented out or removed
+    //   try {
+    //     console.log('AgentInitializer: Initializing DataCollector...');
+    //     // await dataCollectorAgent.ensureInitialized(); // REMOVED - This was causing auto-init
+    //     console.log('AgentInitializer: DataCollector initialization deferred.');
+    //
+    //     // Request initial data - DataCollector will only respond if already initialized by manual refresh
+    //     console.log('AgentInitializer: Requesting initial data (DataCollector will respond if ready)...');
+    //     orchestrator.send({
+    //       from: 'AgentInitializer',
+    //       type: 'REQUEST_INITIAL_DATA',
+    //       payload: {},
+    //       timestamp: Date.now()
+    //     });
+    //   } catch (error) {
+    //     // This catch block might not be hit anymore if ensureInitialized is not called.
+    //     console.error('AgentInitializer: Error during deferred DataCollector setup:', error);
+    //   }
+    // };
+    // initializeDataCollector(); // REMOVED
+
+    // Still send REQUEST_INITIAL_DATA. DataCollectorAgent's handleInitialDataRequest
+    // will be modified to only send data if it's already initialized.
+    console.log('AgentInitializer: Requesting initial data (DataCollector will respond if/when initialized by user action)...');
+    orchestrator.send({
+      from: 'AgentInitializer',
+      type: 'REQUEST_INITIAL_DATA',
+      payload: {},
+      timestamp: Date.now()
+    });
     
     // Cleanup function
     return () => {

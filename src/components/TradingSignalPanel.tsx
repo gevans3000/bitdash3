@@ -44,20 +44,26 @@ export function TradingSignalPanel({ className = '' }: TradingSignalPanelProps) 
           <h3 className="text-lg font-semibold text-white">Trading Signals</h3>
         </div>
         <div className="text-xs text-gray-400">
-          {new Date(currentSignal.timestamp).toLocaleTimeString()}
+          {currentSignal ? new Date(currentSignal.timestamp).toLocaleTimeString() : 'No signal yet'}
         </div>
       </div>
 
       {/* Current Signal */}
-      <div className={`border rounded-lg p-4 ${getSignalColor(currentSignal.action)}`}>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xl font-bold">{currentSignal.action}</span>
-          <span className={`text-lg font-mono ${getConfidenceColor(currentSignal.confidence)}`}>
-            {currentSignal.confidence}%
-          </span>
+      {currentSignal ? (
+        <div className={`border rounded-lg p-4 ${getSignalColor(currentSignal.action)}`}>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xl font-bold">{currentSignal.action}</span>
+            <span className={`text-lg font-mono ${getConfidenceColor(currentSignal.confidence)}`}>
+              {currentSignal.confidence}%
+            </span>
+          </div>
+          <p className="text-sm">{currentSignal.reason}</p>
         </div>
-        <p className="text-sm">{currentSignal.reason}</p>
-      </div>
+      ) : (
+        <div className="border rounded-lg p-4 bg-gray-800/30 border-gray-700/50 text-gray-400">
+          <p className="text-center">Waiting for signal data...</p>
+        </div>
+      )}
 
       {/* Signal History */}
       {history.length > 1 && (

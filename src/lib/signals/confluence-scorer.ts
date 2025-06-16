@@ -1,5 +1,5 @@
 import { Candle } from '../types';
-import { MarketRegime } from '../market/regime';
+import { MarketRegime } from '../agents/types'; // Changed to use MarketRegime from agents/types
 import { rsi } from '../indicators/oscillators';
 import { ema } from '../indicators/moving-averages';
 import { atr, bollingerBands } from '../indicators/volatility';

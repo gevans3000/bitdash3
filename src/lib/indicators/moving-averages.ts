@@ -25,22 +25,23 @@ export function candleSMA(candles: Candle[], period: number): number {
  * Create an Exponential Moving Average calculator with the specified period
  * @param period EMA period
  */
-export function ema(period: number) {
+export function ema(values: number[], period: number): number[] {
+  if (values.length < period) return values.map(() => NaN); // Return array of NaNs
+
   const k = 2 / (period + 1);
+  const emaArray: number[] = new Array(values.length).fill(NaN);
+
+  // Initialize with SMA for the first EMA value
+  let currentEma = values.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
+  emaArray[period - 1] = currentEma;
+
+  // Calculate EMA for remaining values
+  for (let i = period; i < values.length; i++) {
+    currentEma = values[i] * k + currentEma * (1 - k);
+    emaArray[i] = currentEma;
+  }
   
-  return (values: number[]): number => {
-    if (values.length < period) return NaN;
-    
-    // Initialize with SMA for first value
-    let ema = values.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
-    
-    // Calculate EMA for remaining values
-    for (let i = period; i < values.length; i++) {
-      ema = values[i] * k + ema * (1 - k);
-    }
-    
-    return ema;
-  };
+  return emaArray;
 }
 
 /**
@@ -48,7 +49,8 @@ export function ema(period: number) {
  */
 export function candleEMA(candles: Candle[], period: number): number {
   const closes = candles.map(c => c.close);
-  return ema(period)(closes);
+  const emaValues = ema(closes, period);
+  return emaValues.length > 0 ? emaValues[emaValues.length -1] : NaN;
 }
 
 /**
@@ -60,7 +62,8 @@ export function candleEMA(candles: Candle[], period: number): number {
 export function multiEMA(candles: Candle[], periods: number[]): Record<number, number> {
   const closes = candles.map(c => c.close);
   return periods.reduce((acc, period) => {
-    acc[period] = ema(period)(closes);
+    const emaValues = ema(closes, period);
+    acc[period] = emaValues.length > 0 ? emaValues[emaValues.length -1] : NaN;
     return acc;
   }, {} as Record<number, number>);
 }
