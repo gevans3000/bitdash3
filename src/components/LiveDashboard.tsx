@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Candle, OrderBookData, Trade } from '@/lib/types';
 import { TradingSignalPanel } from './TradingSignalPanel';
 import OnChainInsightsPanel from './OnChainInsightsPanel';
-import { useSignals } from '@/hooks/useSignals';
 import { browserCache } from '@/lib/cache/browserCache';
 import { smartFetch } from '@/lib/cache/smart-cache';
 import { useConnectionStatus } from '@/hooks/useWebSocket';
@@ -46,9 +45,6 @@ export default function LiveDashboard({ refreshTrigger = 0 }: LiveDashboardProps
   // Track initialization status
   const initialized = useRef(false);
   
-  // Generate signals from candles with memoization to prevent unnecessary rerenders
-  const memoizedCandles = useCallback(() => candles, [candles]);
-  const signals = useSignals({ candles: memoizedCandles() });
   
   // Initialize from cache on first render
   useEffect(() => {

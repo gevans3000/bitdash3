@@ -5,6 +5,7 @@ import { Candle } from '@/lib/types';
 
 const initialAppState: AppState = {
   latestSignal: null,
+  signalHistory: [],
   candlesForChart: [],
   latestIndicators: null,
   dataStatus: { text: 'Initializing...', color: 'grey', lastUpdateTime: null },
@@ -20,7 +21,10 @@ class UIAdapterService {
 
     orchestrator.register('NEW_SIGNAL_5M', ((msg: AgentMessage<TradingSignal>) => {
       const signal = msg.payload;
-      this.updateState(s => ({ ...s, latestSignal: signal }));
+      this.updateState(s => {
+        const history = [signal, ...s.signalHistory].slice(0, 20);
+        return { ...s, latestSignal: signal, signalHistory: history };
+      });
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (signal.action !== 'HOLD' && signal.confidence >= 70) {
           const title = `BitDash3 Signal: ${signal.action} BTC!`;
