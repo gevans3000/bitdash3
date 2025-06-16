@@ -3,6 +3,8 @@ import { CandleChart } from '@/components/CandleChart';
 import { MarketRegimeIndicator } from '@/components/MarketRegimeIndicator';
 import PerformanceMetricsPanel from '@/components/dashboard/PerformanceMetricsPanel';
 import BasicCandleDisplay from '@/components/BasicCandleDisplay';
+import DataFreshnessIndicator from '@/components/DataFreshnessIndicator';
+import SignalDisplay from '@/components/SignalDisplay';
 import dynamic from 'next/dynamic';
 
 // Dynamically import PerformanceMetrics with no SSR since it uses browser APIs
@@ -95,7 +97,10 @@ export default function DashboardPage() {
           <div className="bg-white p-4 rounded-lg shadow-sm border">
             <CandleChart height={600} />
           </div>
-          
+
+          <DataFreshnessIndicator />
+          <SignalDisplay />
+
           {/* Basic Candle Display */}
           <div className="bg-white p-4 rounded-lg shadow-sm border">
             <h2 className="text-lg font-medium mb-3">Basic Candle Display</h2>

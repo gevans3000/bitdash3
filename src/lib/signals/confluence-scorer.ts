@@ -272,3 +272,21 @@ export class ConfluenceScorer {
     };
   }
 }
+
+import { IndicatorDataSet } from '../agents/types';
+
+export function getSignalConfluence(indicators: IndicatorDataSet, regime: MarketRegime): { action: 'BUY' | 'SELL' | 'HOLD'; confidence: number; reason: string } {
+  if (!indicators.emaFast || !indicators.emaSlow || !indicators.rsi) {
+    return { action: 'HOLD', confidence: 0, reason: 'Insufficient indicators' };
+  }
+
+  if (indicators.emaFast > indicators.emaSlow && indicators.rsi > 55) {
+    return { action: 'BUY', confidence: 70, reason: 'EMA fast above slow and RSI >55' };
+  }
+
+  if (indicators.emaFast < indicators.emaSlow && indicators.rsi < 45) {
+    return { action: 'SELL', confidence: 70, reason: 'EMA fast below slow and RSI <45' };
+  }
+
+  return { action: 'HOLD', confidence: 50, reason: 'No strong signal' };
+}
