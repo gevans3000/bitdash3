@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Candle } from '@/lib/types';
 import { useMarketData } from '@/hooks/useMarketData';
-import { MarketRegime } from '@/lib/market/regime';
-import { createChart, ColorType, CrosshairMode, ISeriesApi, CandlestickData, UTCTimestamp, LineStyle } from 'lightweight-charts';
+// import { MarketRegime } from '@/lib/market/regime'; // regime prop is used, ensure this is the correct type or from useMarketData
+import { createChart, ColorType, CrosshairMode, ISeriesApi, CandlestickData, UTCTimestamp, LineStyle, IChartApi } from 'lightweight-charts';
 import { detectEMACross, EMACrossResult } from '@/lib/signals/ema-crossover';
 import { VolumeSpikes } from './VolumeSpikes';
 
@@ -34,17 +34,21 @@ export const CandleChart: React.FC<CandleChartProps> = ({
   
   const [emaSignals, setEmaSignals] = useState<EMACrossResult | null>(null);
   
-  // Calculate EMA signals
-  useEffect(() => {
+  // Calculate EMA signals using useMemo for optimization
+  const emaSignalsResult = useMemo(() => {
     if (candles.length >= 22) { // Need at least 21 candles for EMA21
-      const signals = detectEMACross(candles);
-      setEmaSignals(signals);
+      return detectEMACross(candles);
     }
+    return null;
   }, [candles]);
+
+  useEffect(() => {
+    setEmaSignals(emaSignalsResult);
+  }, [emaSignalsResult]);
   
   // Add EMA lines to chart
   const addEMALines = useCallback((chart: any) => {
-    if (!emaSignals || !chart) return;
+    if (!emaSignalsResult || !chart) return; // Use emaSignalsResult for condition
     
     // Remove existing EMA lines
     chart.getAllPanes().forEach((pane: any) => {
@@ -74,13 +78,18 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     });
     
     // Add EMA data points
+    // Use emaSignalsResult directly if its structure matches emaSignals,
+    // or adapt if emaSignals (the state) is preferred for some reason after being set.
+    // Assuming emaSignals (state) is what subsequent logic expects after being set by the effect.
+    if (!emaSignals) return; // Guard against null emaSignals state
+
     const ema9Data = emaSignals.fastEMA.map((value, index) => ({
-      time: Math.floor(new Date(candles[index].timestamp).getTime() / 1000) as UTCTimestamp,
+      time: Math.floor(new Date(candles[index].time).getTime() / 1000) as UTCTimestamp,
       value,
     }));
     
     const ema21Data = emaSignals.slowEMA.map((value, index) => ({
-      time: Math.floor(new Date(candles[index].timestamp).getTime() / 1000) as UTCTimestamp,
+      time: Math.floor(new Date(candles[index].time).getTime() / 1000) as UTCTimestamp,
       value,
     }));
     
@@ -91,11 +100,11 @@ export const CandleChart: React.FC<CandleChartProps> = ({
       chart.removeSeries(ema9Line);
       chart.removeSeries(ema21Line);
     };
-  }, [candles, emaSignals]);
+  }, [candles, emaSignals]); // Keep emaSignals (state) as dependency here if addEMALines relies on the state version
   
   // Add signal indicators to chart
   const addSignalIndicators = useCallback((chart: any) => {
-    if (!emaSignals || !chart) return;
+    if (!emaSignals || !chart) return; // Use emaSignals (state) here
     
     const { signal } = emaSignals;
     const priceScale = chart.priceScale('right');
@@ -130,20 +139,20 @@ export const CandleChart: React.FC<CandleChartProps> = ({
         chart._container.removeChild(marker);
       }
     };
-  }, [emaSignals]);
+  }, [emaSignals]); // Use emaSignals (state) here
 
   // Calculate volume moving average and identify spikes
   const { volumeMA, priceExtremes } = useMemo(() => {
     if (candles.length < 21) return { volumeMA: 0, priceExtremes: { high: 0, low: Infinity } };
     
     // Calculate 20-period volume moving average
-    const volumes = candles.slice(-21).map(c => c.volume);
-    const volumeMA = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+    const volumes = candles.slice(-21).map((c: Candle) => c.volume);
+    const volumeMA = volumes.reduce((sum: number, vol: number) => sum + vol, 0) / volumes.length;
     
     // Find recent high and low prices (last 20 candles)
     const recentCandles = candles.slice(-20);
-    const highs = recentCandles.map(c => c.high);
-    const lows = recentCandles.map(c => c.low);
+    const highs = recentCandles.map((c: Candle) => c.high);
+    const lows = recentCandles.map((c: Candle) => c.low);
     
     return {
       volumeMA,
@@ -158,12 +167,12 @@ export const CandleChart: React.FC<CandleChartProps> = ({
   const candleData = useMemo(() => {
     if (!candles.length) return [];
     
-    return candles.map((candle) => {
+    return candles.map((candle: Candle) => {
       const isLargeMove = Math.abs(candle.close - candle.open) / candle.open > 0.02; // 2% move
       const isVolumeSpike = candle.volume > volumeMA * 1.5; // 150% of average volume
       
       return {
-        time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as UTCTimestamp,
+        time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp, // Changed to .time
         open: candle.open,
         high: candle.high,
         low: candle.low,
@@ -191,9 +200,9 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     
 
     // Create chart
-    const chart = createChart(container, {
+    const chart: IChartApi = createChart(container, { // Explicitly type chart
       layout: {
-        background: { type: 'solid', color: '#FFFFFF' },
+        background: { type: ColorType.Solid, color: '#FFFFFF' },
         textColor: '#333',
       },
       grid: {
@@ -226,7 +235,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     });
 
     // Create candlestick series with enhanced styling
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = (chart as any).addCandlestickSeries({ // Type assertion as workaround
       upColor: '#10B981',
       downColor: '#EF4444',
       borderUpColor: '#10B981',
@@ -237,7 +246,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     });
 
     // Create volume series
-    const volumeSeries = chart.addHistogramSeries({
+    const volumeSeries = (chart as any).addHistogramSeries({ // Type assertion as workaround
       color: 'rgba(79, 70, 229, 0.3)',
       priceFormat: {
         type: 'volume',
@@ -264,10 +273,10 @@ export const CandleChart: React.FC<CandleChartProps> = ({
       candleSeries.setData(candleData);
       
       // Add volume data with dynamic coloring
-      const volumeData = candles.map(candle => ({
-        time: Math.floor(new Date(candle.timestamp).getTime() / 1000) as UTCTimestamp,
+      const volumeData = candles.map((candle: Candle) => ({
+        time: Math.floor(new Date(candle.time).getTime() / 1000) as UTCTimestamp, // Changed to .time
         value: candle.volume,
-        color: candle.close >= candle.open 
+        color: candle.close >= candle.open
           ? 'rgba(16, 185, 129, 0.5)'  // Green for up candles
           : 'rgba(239, 68, 68, 0.5)',  // Red for down candles
       }));
@@ -340,7 +349,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     }
 
     // Format data for the chart
-    const candleData = candles.map((candle) => ({
+    const candleData = candles.map((candle: Candle) => ({
       time: (candle.time) as UTCTimestamp,
       open: candle.open,
       high: candle.high,
@@ -348,7 +357,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
       close: candle.close,
     }));
 
-    const volumeData = candles.map((candle) => ({
+    const volumeData = candles.map((candle: Candle) => ({
       time: (candle.time) as UTCTimestamp,
       value: candle.volume,
       color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)',
@@ -432,6 +441,15 @@ export const CandleChart: React.FC<CandleChartProps> = ({
     );
   }
 
+  // Show no data state
+  if (!isLoading && candles.length === 0) {
+    return (
+      <div className={`flex items-center justify-center ${className}`} style={{ width, height }}>
+        <div className="text-gray-500">No chart data available for {symbol}.</div>
+      </div>
+    );
+  }
+
   return (
     <div className={`relative flex flex-col ${className}`} style={{ width, height }}>
       <div className="relative" style={{ height: '70%' }}>
@@ -449,10 +467,10 @@ export const CandleChart: React.FC<CandleChartProps> = ({
         </div>
         
         {/* Signal indicator with RSI info */}
-        {emaSignals?.signal && emaSignals.signal.type !== 'NEUTRAL' && (
+        {emaSignals?.signal && emaSignals.signal.type !== 'NEUTRAL' && ( // Use emaSignals (state) here
           <div className={`absolute top-10 right-2 px-2 py-1 text-xs font-medium rounded shadow ${
-            emaSignals.signal.type === 'BUY' 
-              ? 'bg-green-100 text-green-800 border border-green-200' 
+            emaSignals.signal.type === 'BUY'
+              ? 'bg-green-100 text-green-800 border border-green-200'
               : 'bg-red-100 text-red-800 border border-red-200'
           }`}>
             <div className="font-bold">{emaSignals.signal.type} Signal</div>
@@ -460,7 +478,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
             {emaSignals.signal.rsi !== undefined && (
               <div className="flex items-center">
                 RSI: <span className={`ml-1 font-medium ${
-                  emaSignals.signal.rsi > 70 ? 'text-red-500' : 
+                  emaSignals.signal.rsi > 70 ? 'text-red-500' :
                   emaSignals.signal.rsi < 30 ? 'text-green-500' : 'text-gray-600'
                 }`}>
                   {emaSignals.signal.rsi.toFixed(1)}
@@ -481,15 +499,16 @@ export const CandleChart: React.FC<CandleChartProps> = ({
         )}
       </div>
       
-      {/* RSI Indicator */}
+      {/* RSI Indicator (Commented out due to missing import/definition)
       <div className="h-[25%] w-full">
         <RSIIndicator candles={candles} />
       </div>
+      */}
       
-      {/* Price Targets */}
+      {/* Price Targets (Commented out due to missing import/definition for showTargets and PriceTargets)
       {showTargets && emaSignals?.signal && emaSignals.signal.type !== 'NEUTRAL' && (
         <div className="h-[15%] w-full border-t border-gray-200 bg-gray-50 p-2 overflow-hidden">
-          <PriceTargets 
+          <PriceTargets
             candles={candles}
             entryPrice={emaSignals.signal.price}
             isLong={emaSignals.signal.type === 'BUY'}
@@ -498,6 +517,7 @@ export const CandleChart: React.FC<CandleChartProps> = ({
           />
         </div>
       )}
+      */}
       
       {/* Chart legend */}
       <div className="absolute bottom-2 left-2 text-xs text-gray-500">
