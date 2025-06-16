@@ -4,6 +4,19 @@
 
 Guide a novice developer to build a dashboard that surfaces clear, actionable information to help a user make **profitable Bitcoin trading decisions on the 5-minute chart.** This document is your primary guide. Follow it meticulously.
 
+## 📖 How to Use This Document (For the Novice Developer)
+
+Welcome! This document is your step-by-step guide to building BitDash3. To ensure a smooth and successful journey, please keep the following in mind:
+
+*   **Read First, Then Code:** Before you start coding, read the entire task, especially the "Why" section, to understand its purpose.
+*   **Follow Instructions Exactly:** Implement the code *exactly* as provided in the instructions and snippets. Do not deviate or try to "improve" them at this stage.
+*   **Verify, Then Proceed:** Complete *all* verification steps for a task and ensure they pass *before* moving to the next task. This is crucial for building a stable foundation.
+*   **Ask for Help:** If you find yourself stuck on a step for more than 30-60 minutes after trying to debug, please ask for help. It's better to ask than to stay blocked.
+*   **Lean & Simple:** Our goal is to build a minimal, viable product first. Focus on the core functionality described. Fancy features can be added later.
+*   **Console is Your Friend:** Pay close attention to your browser's developer console for logs and errors. They provide vital clues for debugging.
+
+---
+
 ## ✅ Completion Status - Updated 2025-06-16
 
 ### Phase 1: 🏗️ Data Foundation & Basic Chart Display - COMPLETED ✅
@@ -82,6 +95,31 @@ This approach helps in:
 *   **Modularity:** Each agent has a specific responsibility.
 *   **Testability:** Individual agents can be tested more easily.
 
+```mermaid
+graph LR
+    subgraph "Browser UI"
+        UI_Comps[React Components e.g., SignalDisplay, Chart]
+        DataFreshness[DataFreshnessIndicator]
+    end
+
+    subgraph "Client-Side Agents"
+        DC[DataCollectorAgent] -- Candle Data (INITIAL_CANDLES_5M, LIVE_CANDLE_UPDATE_5M, NEW_CLOSED_CANDLE_5M, DATA_STATUS_UPDATE) --> O
+        IE[IndicatorEngineAgent] -- Calculated Indicators (INDICATORS_READY_5M) --> O
+        SG[SignalGeneratorAgent] -- Trading Signals (NEW_SIGNAL_5M) --> O
+        O[Orchestrator]
+        UI_Adapter[UIAdapterService] -- Aggregated AppState --> UI_Comps
+        UI_Adapter -- Aggregated AppState --> DataFreshness
+    end
+
+    BinanceAPI[Binance API/WebSocket] --> DC
+    O -- NEW_CLOSED_CANDLE_5M / INITIAL_CANDLES_5M --> IE
+    O -- INDICATORS_READY_5M --> SG
+    O -- NEW_SIGNAL_5M, INITIAL_CANDLES_5M, LIVE_CANDLE_UPDATE_5M, INDICATORS_READY_5M, DATA_STATUS_UPDATE, DATA_ERROR --> UI_Adapter
+
+    classDef agent fill:#D6EAF8,stroke:#5DADE2,stroke-width:2px;
+    class DC,IE,SG,O,UI_Adapter agent;
+```
+
 ---
 
 ## 🛠️ Lean Development Roadmap: Building the Profitable Decision Dashboard
@@ -134,6 +172,9 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
             this.subscribers.get(messageType)!.push(handler);
             
             // Return an unsubscribe function
+            // This is important for preventing memory leaks. Components or agents
+            // can call this function when they no longer need to listen to these messages
+            // (e.g., when a React component unmounts).
             return () => {
               const handlers = this.subscribers.get(messageType);
               if (handlers) {
@@ -177,6 +218,52 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
     4.  Ensure you have a type for Binance WebSocket Kline data (Task 1.2 in original `TASKS.md` called it `BinanceKline`, you might have it as `CandleWebSocketData`'s `k` property in `src/lib/types.ts`). This is what `subscribeToCandleUpdates` will provide to its callback.
 *   **Instructions:**
     1.  Create file `src/lib/agents/DataCollector.ts` with the following exact content. Pay close attention to the function names used for fetching data (e.g., `getBinanceCandles`, `subscribeToCandleUpdates`) and ensure they match what's available in your `binance.ts` and `binance-websocket.ts`.
+        *   **Pro-Tip for UI Dev (Temporary Mock Data):**
+            To work on UI components without hitting the live Binance API constantly, you can temporarily modify the `init()` method in `DataCollectorAgent` to emit mock candle data. Remember to remove this mock setup when testing real data flow!
+            ```typescript
+            // Inside DataCollector.ts init() - TEMPORARY FOR UI DEV
+            // Comment out Binance calls and use this:
+            /*
+            this.isInitializing = true;
+            console.log("DataCollectorAgent: USING MOCK DATA MODE");
+            let mockTime = Date.now() - (100 * 5 * 60 * 1000); // Start 100 5-min candles ago
+            this.candleBuffer = [];
+            for (let i = 0; i < 100; i++) {
+                const mockCandle: Candle = {
+                    time: mockTime,
+                    open: 30000 + (Math.random() * 100),
+                    high: 30100 + (Math.random() * 100),
+                    low: 29900 + (Math.random() * 100),
+                    close: 30050 + (Math.random() * 100),
+                    volume: 10 + Math.random() * 5
+                };
+                this.candleBuffer.push(mockCandle);
+                mockTime += (5 * 60 * 1000);
+            }
+            orchestrator.send<Candle[]>({ from: 'DataCollector' as AgentName, type: 'INITIAL_CANDLES_5M', payload: [...this.candleBuffer], timestamp: Date.now() });
+            
+            setInterval(() => {
+                const lastMock = this.candleBuffer[this.candleBuffer.length-1];
+                const newMockCandle: Candle = {
+                    time: lastMock.time + (5 * 60 * 1000),
+                    open: lastMock.close,
+                    high: lastMock.close + (Math.random() * 50),
+                    low: lastMock.close - (Math.random() * 50),
+                    close: lastMock.close + (Math.random() * 100 - 50),
+                    volume: 10 + Math.random() * 5
+                };
+                this.candleBuffer.push(newMockCandle);
+                if (this.candleBuffer.length > 200) this.candleBuffer.shift();
+
+                orchestrator.send<Candle & {isClosed: boolean}>({ from: 'DataCollector' as AgentName, type: 'LIVE_CANDLE_UPDATE_5M', payload: {...newMockCandle, isClosed: true}, timestamp: Date.now() });
+                orchestrator.send<Candle>({ from: 'DataCollector' as AgentName, type: 'NEW_CLOSED_CANDLE_5M', payload: newMockCandle, timestamp: Date.now() });
+                orchestrator.send<{ lastUpdateTime: number; lastCandleTime: number }>({ from: 'DataCollector' as AgentName, type: 'DATA_STATUS_UPDATE', payload: { lastUpdateTime: Date.now(), lastCandleTime: newMockCandle.time }, timestamp: Date.now() });
+            }, 5000); // Emit new mock candle every 5 seconds
+            this.isInitializing = false;
+            return;
+            */
+            // End of MOCK DATA MODE
+            ```
         ```typescript
         // src/lib/agents/DataCollector.ts
         import { orchestrator } from './Orchestrator';
@@ -347,6 +434,10 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
         *   `📬 Orchestrator: [DataCollector] sent [LIVE_CANDLE_UPDATE_5M]` (inspect payload: should be a single candle with `isClosed` property)
         *   And, when a 5-minute candle closes: `📬 Orchestrator: [DataCollector] sent [NEW_CLOSED_CANDLE_5M]` (inspect payload: should be a single candle)
     5.  There should be **no** "DataCollectorAgent: Initialization Error" or "DATA_ERROR" messages from `DataCollector` in the console at this stage.
+    *   **Troubleshooting Tips:**
+        *   **No `Loaded X initial candles` message?** Check: Internet connection, `getBinanceCandles` function in [`src/lib/binance.ts`](src/lib/binance.ts) (test it separately if unsure), any errors from Binance in the console.
+        *   **No `LIVE_CANDLE_UPDATE_5M`?** Check: WebSocket connection in `subscribeToCandleUpdates` ([`src/lib/binance-websocket.ts`](src/lib/binance-websocket.ts)), ensure the symbol `BTCUSDT` and interval `5m` are correct for the API.
+        *   **`DATA_ERROR` message?** The payload of this message will give clues. It might be an API key issue, rate limit, or network problem.
 
 **Task 1.3: Basic Candle Chart Display (Verification Step)**
 *   **Why:** This task is **CRITICAL** for verifying that our `DataCollectorAgent` and `Orchestrator` are working correctly and that data is flowing through the system. We will create a **very simple** React component that listens to the `Orchestrator` and displays raw candle data. **This is NOT the final chart for the dashboard; it's a temporary diagnostic tool.**
@@ -482,6 +573,10 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
         *   (Periodically) Logs from `LIVE_CANDLE_UPDATE_5M` if you uncomment the console.log in its handler.
     8.  There should be **no** "Chart Error" message displayed by `BasicCandleDisplay` at this stage.
     9.  **Crucially, this verifies that `DataCollectorAgent` -> `Orchestrator` -> `BasicCandleDisplay` data pipeline is working.**
+    *   **Troubleshooting Tips:**
+        *   **"Awaiting candle data..." persists?** Ensure `DataCollectorAgent` is running and sending `INITIAL_CANDLES_5M` messages (check its console logs).
+        *   **No updates?** Verify `DataCollectorAgent` is sending `LIVE_CANDLE_UPDATE_5M` messages.
+        *   **"Chart Error" displayed?** Check the console for `BasicCandleDisplay: Received DATA_ERROR` messages for more details. This indicates a problem in the data collection pipeline.
 
 **Task 1.4: Data Freshness Indicator (Trust Factor)**
 *   **Why:** The user *must* know if the data they are seeing is live and up-to-date, or if there's a problem. This component builds trust.
@@ -610,6 +705,9 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
     5.  If you simulate data stopping (e.g., disconnect internet briefly, if possible, or stop the `npm run dev` process if it serves mock data that stops), the indicator should change through "● Xs ago" (lightgreen/orange) and eventually to "● >2m stale!" (red).
     6.  If a `DATA_ERROR` message is sent by `DataCollectorAgent`, the indicator should show an error state (red).
     7.  Check console logs from `DataFreshnessIndicator` for mounting/unmounting and `DATA_ERROR` messages.
+    *   **Troubleshooting Tips:**
+        *   **Stuck on "Connecting..."?** Ensure `DataCollectorAgent` is running and sending `DATA_STATUS_UPDATE` messages.
+        *   **Always "Stale" or "Error"?** Check the console for `DataFreshnessIndicator: Received DATA_ERROR` messages. This indicates a problem in the data collection pipeline or the `DataCollectorAgent` itself.
 
 ---
 ### Phase 2: ⚙️ Core Indicator Calculation - The Analyst Robot
@@ -626,7 +724,55 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
         *   EMA (Exponential Moving Average) - e.g., `ema(prices: number[], period: number): number[]`
         *   RSI (Relative Strength Index) - e.g., `rsi(prices: number[], period: number): number[]`
         *   Bollinger Bands - e.g., `bollingerBands(prices: number[], period: number, stdDev: number): { upper: number[], middle: number[], lower: number[] }`
-        *   **ATR (Average True Range) - e.g., `atr(candles: Candle[], period: number): number[]` - This is crucial for later tasks (Stop Loss/Take Profit). Ensure this function is created and returns the ATR values.**
+        *   **ATR (Average True Range) - This is crucial for later tasks (Stop Loss/Take Profit). Ensure this function is created and returns the ATR values.**
+            *   **Starter Snippet for `src/lib/indicators/atr.ts` (V1 - Simple):**
+                ```typescript
+                // src/lib/indicators/atr.ts
+                import { Candle } from '@/lib/types';
+
+                /**
+                 * Calculates True Range (TR) for a single candle.
+                 * TR = Max of (High - Low), Abs(High - PreviousClose), Abs(Low - PreviousClose)
+                 */
+                function calculateTR(currentCandle: Candle, previousCandle?: Candle): number {
+                  const highLow = currentCandle.high - currentCandle.low;
+                  if (!previousCandle) return highLow; // Or handle as per specific ATR definition for first period
+
+                  const highPrevClose = Math.abs(currentCandle.high - previousCandle.close);
+                  const lowPrevClose = Math.abs(currentCandle.low - previousCandle.close);
+                  return Math.max(highLow, highPrevClose, lowPrevClose);
+                }
+
+                /**
+                 * Calculates Average True Range (ATR).
+                 * This is a simplified version. For production, use a robust library or method.
+                 * Returns an array of ATR values, same length as candles input, with initial values being NaN or undefined until enough data.
+                 */
+                export function atr(candles: Candle[], period: number): number[] {
+                  if (candles.length < period) return candles.map(() => NaN); // Not enough data
+
+                  const atrValues: number[] = new Array(candles.length).fill(NaN);
+                  const trValues: number[] = [];
+
+                  // Calculate TR values
+                  for (let i = 0; i < candles.length; i++) {
+                    trValues.push(calculateTR(candles[i], candles[i-1]));
+                  }
+                  
+                  // Calculate first ATR (simple average of first 'period' TR values)
+                  let sumTR = 0;
+                  for (let i = 0; i < period; i++) {
+                    sumTR += trValues[i] || 0; // Handle potential NaN if calculateTR returns it for first candle
+                  }
+                  atrValues[period - 1] = sumTR / period;
+
+                  // Subsequent ATR values: ATR = ((Previous ATR * (n - 1)) + Current TR) / n
+                  for (let i = period; i < candles.length; i++) {
+                    atrValues[i] = ((atrValues[i-1] * (period - 1)) + trValues[i]) / period;
+                  }
+                  return atrValues;
+                }
+                ```
     2.  Place these functions in appropriate files within `src/lib/indicators/` (e.g., `src/lib/indicators/moving-averages.ts`, `src/lib/indicators/oscillators.ts`, `src/lib/indicators/volatility.ts`).
 *   **Instructions:**
     1.  Define the `IndicatorDataSet` interface. This will be the structure of the data packet this agent sends. Add it to `src/lib/agents/types.ts` or create a new `src/lib/agents/IndicatorEngineTypes.ts` if preferred. For now, let's add to `types.ts` for simplicity:
@@ -764,6 +910,9 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
             *   `📬 Orchestrator: [IndicatorEngine] sent [INDICATORS_READY_5M]`
         *   Inspect the `payload` of the `INDICATORS_READY_5M` message. It should contain values for `emaFast`, `emaSlow`, `rsi`, `bbUpper`, `bbMiddle`, `bbLower`, and importantly, `atr`. These values should seem reasonable (not all null, unless there truly isn't enough data yet).
     4.  If your indicator functions log errors or return unexpected `null`s, investigate them. Ensure they can handle cases where they might not have enough data points yet (e.g., at the very beginning).
+    *   **Troubleshooting Tips:**
+        *   **No `INDICATORS_READY_5M` messages?** Ensure `DataCollectorAgent` is sending `NEW_CLOSED_CANDLE_5M` messages, and that `IndicatorEngineAgent`'s constructor is being called (check console logs).
+        *   **Indicators are `null` or `NaN`?** This usually means there isn't enough historical candle data yet for the calculation period, or your indicator functions are not handling edge cases (e.g., insufficient input array length) gracefully. Check `MIN_CANDLES_FOR_INDICATORS` and the logic within your indicator functions.
 
 ---
 ### Phase 3: 🧠 Signal Generation & Core UI Display - The Decision Helper
@@ -783,8 +932,87 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
     1.  Ensure `IndicatorEngineAgent` (Task 2.1) is correctly calculating and sending `atr` in its `IndicatorDataSet` payload.
     2.  You will need to create or adapt functions for:
         *   `detectRegime(indicators: IndicatorDataSet, candles: Candle[]): MarketRegime` (e.g., in `src/lib/market/regime-detector.ts`). `MarketRegime` could be a type like `'trending-up' | 'trending-down' | 'ranging' | 'volatile'`. This function might need historical candle data in addition to the latest indicators.
+            *   **Starter Snippet for `src/lib/market/regime-detector.ts` (V1 - Simple):**
+                ```typescript
+                // src/lib/market/regime-detector.ts
+                import { IndicatorDataSet } from '@/lib/agents/types';
+                import { Candle } from '@/lib/types'; // If needed
+
+                export type MarketRegime = 'trending-up' | 'trending-down' | 'ranging' | 'undefined';
+
+                export function detectRegime(indicators: IndicatorDataSet, candles?: Candle[]): MarketRegime {
+                  // VERY simple V1: Based on EMAs only
+                  if (indicators.emaFast && indicators.emaSlow) {
+                    if (indicators.emaFast > indicators.emaSlow) return 'trending-up';
+                    if (indicators.emaFast < indicators.emaSlow) return 'trending-down';
+                  }
+                  return 'ranging'; // Default or if EMAs are equal/null
+                }
+                ```
         *   `getSignalConfluence(indicators: IndicatorDataSet, regime: MarketRegime): { action: 'BUY' | 'SELL' | 'HOLD'; confidence: number; reason: string; }` (e.g., in `src/lib/signals/confluence-scorer.ts`). This is your core strategy logic.
+            *   **Starter Snippet for `src/lib/signals/confluence-scorer.ts` (V1 - Simple):**
+                ```typescript
+                // src/lib/signals/confluence-scorer.ts
+                import { IndicatorDataSet, MarketRegime } from '@/lib/agents/types';
+
+                export interface SignalConfluenceResult {
+                  action: 'BUY' | 'SELL' | 'HOLD';
+                  confidence: number; // 0-100
+                  reason: string;
+                }
+
+                export function getSignalConfluence(indicators: IndicatorDataSet, regime: MarketRegime): SignalConfluenceResult {
+                  // V1: Extremely Simple EMA Crossover Strategy
+                  const { emaFast, emaSlow, rsi } = indicators;
+
+                  if (emaFast && emaSlow) {
+                    if (emaFast > emaSlow && (rsi ? rsi > 50 : true)) { // EMA fast crosses above slow, RSI optional confirmation
+                      return { action: 'BUY', confidence: 60, reason: 'EMA Crossover (Fast > Slow) + RSI > 50' };
+                    }
+                    if (emaFast < emaSlow && (rsi ? rsi < 50 : true)) { // EMA fast crosses below slow, RSI optional confirmation
+                      return { action: 'SELL', confidence: 60, reason: 'EMA Crossover (Fast < Slow) + RSI < 50' };
+                    }
+                  }
+                  return { action: 'HOLD', confidence: 50, reason: 'No clear signal based on EMA crossover.' };
+                }
+                ```
         *   `calculateTradeParams(params: { entryPrice: number; signalType: 'BUY' | 'SELL'; atrValue: number; candles?: Candle[]; riskRewardRatio?: number }): { stopLoss?: number; takeProfit?: number; }` (e.g., in `src/lib/signals/price-targets.ts` or `src/lib/trading/`).
+            *   **Starter Snippet for `src/lib/signals/price-targets.ts` (V1 - Simple):**
+                ```typescript
+                // src/lib/signals/price-targets.ts
+                import { Candle } from '@/lib/types';
+
+                interface TradeParamsInput {
+                  entryPrice: number;
+                  signalType: 'BUY' | 'SELL';
+                  atrValue: number;
+                  candles?: Candle[]; // Optional for more complex logic
+                  riskRewardRatio?: number;
+                }
+
+                export function calculateTradeParams({ entryPrice, signalType, atrValue, riskRewardRatio = 2 }: TradeParamsInput): { stopLoss?: number; takeProfit?: number; } {
+                  if (!atrValue || atrValue <= 0) { // ATR must be positive
+                    return { stopLoss: undefined, takeProfit: undefined };
+                  }
+
+                  const atrMultiplierSL = 1.5; // Example: Stop loss at 1.5 * ATR
+                  const stopLossDistance = atrValue * atrMultiplierSL;
+                  let stopLoss, takeProfit;
+
+                  if (signalType === 'BUY') {
+                    stopLoss = entryPrice - stopLossDistance;
+                    takeProfit = entryPrice + (stopLossDistance * riskRewardRatio);
+                  } else { // SELL
+                    stopLoss = entryPrice + stopLossDistance;
+                    takeProfit = entryPrice - (stopLossDistance * riskRewardRatio);
+                  }
+                  // Basic sanity check: SL and TP should not be negative or zero for price
+                  if (stopLoss <= 0 || takeProfit <= 0) {
+                      return { stopLoss: undefined, takeProfit: undefined };
+                  }
+                  return { stopLoss, takeProfit };
+                }
+                ```
 *   **Instructions:**
     1.  Define the `TradingSignal` interface. This is the final output for the UI. Add to `src/lib/agents/types.ts`:
         ```typescript
@@ -909,6 +1137,10 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
             *   `timestamp` and `rawIndicators`.
     4.  Verify that the `stopLoss` and `takeProfit` values make sense relative to the `entryPrice` and the market's volatility (which ATR helps measure).
     5.  If `ATR is missing` warning appears, go back to Task 2.1 and ensure `IndicatorEngineAgent` calculates and sends ATR.
+    *   **Troubleshooting Tips:**
+        *   **No `NEW_SIGNAL_5M` messages?** Ensure `IndicatorEngineAgent` is sending `INDICATORS_READY_5M` messages, and that `SignalGeneratorAgent`'s constructor is being called.
+        *   **`action` is always 'HOLD'?** Review your `getSignalConfluence` logic. Is it too strict? Are the indicator values as expected?
+        *   **`stopLoss` or `takeProfit` are `N/A` or `undefined`?** This indicates `indicators.atr` was `null` or `0` when `calculateTradeParams` was called. Double-check that `IndicatorEngineAgent` is correctly calculating and sending `atr`.
 
 **Task 3.2: Display Core Signal & Parameters in UI (via UIAdapter)**
 *   **Why:** To present the actionable trading signal and its context (reason, SL/TP, etc.) to the user on the dashboard. We'll introduce a `UIAdapter` to simplify state management for React components.
@@ -1026,7 +1258,10 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
 
           useEffect(() => {
             const unsub = uiAdapter.subscribe(setAppState);
-            return unsub; // Cleanup subscription on unmount
+            // The returned function from useEffect is a cleanup function.
+            // It's called when the component unmounts, ensuring we unsubscribe
+            // from uiAdapter to prevent memory leaks and state updates on unmounted components.
+            return unsub;
           }, []);
 
           return appState;
@@ -1173,6 +1408,9 @@ Follow each task sequentially. Test locally using `npm run dev` at each "✅ Ver
             *   The raw indicators should be viewable in the `<details>` section.
     3.  Check the console for logs from `UIAdapterService` showing it's subscribing and receiving messages.
     4.  Verify that the displayed signal information is clear and directly helpful for making a trading decision (as per the "Core Information" section).
+    *   **Troubleshooting Tips:**
+        *   **`SignalDisplay` stuck on "Awaiting first signal..."?** Ensure `SignalGeneratorAgent` is running and sending `NEW_SIGNAL_5M` messages. Check its console logs for any errors or warnings.
+        *   **Data not updating in `SignalDisplay` or `DataFreshnessIndicator`?** Verify that `UIAdapterService` is correctly subscribing to all necessary Orchestrator messages (`NEW_SIGNAL_5M`, `DATA_STATUS_UPDATE`, etc.) and that its `updateState` method is being called.
 
 ---
 ### Phase 4: ⚡ Actionability - Don't Miss the Trade!
@@ -1229,5 +1467,6 @@ Once all tasks are marked as complete:
 4.  **Alerts:** Are browser alerts timely and accurate for high-confidence signals?
 5.  **Console Cleanliness:** Are there any unexpected errors or excessive/unnecessary console logs? (Debug logs are fine during development but consider removing them or making them conditional for a "production" build).
 6.  **Code Readability:** Is the code you've written (especially in helper functions like signal logic) understandable and well-commented where necessary?
+7.  **Simplicity:** Is there any part of the code you wrote that could be made simpler while still achieving the goal? (Lean code!)
 
 This lean roadmap focuses on the critical path to a decision-making tool. Further enhancements (detailed performance tracking, more advanced UI elements, user settings, etc.) can be added in subsequent phases after this foundation is rock solid.
