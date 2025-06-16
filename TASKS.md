@@ -15,6 +15,15 @@ Welcome! This document is your step-by-step guide to building BitDash3. To ensur
 *   **Lean & Simple:** Our goal is to build a minimal, viable product first. Focus on the core functionality described. Fancy features can be added later.
 *   **Console is Your Friend:** Pay close attention to your browser's developer console for logs and errors. They provide vital clues for debugging.
 
+### 👉 For the Dashboard-Focused Junior (AI) Developer:
+
+*   **Your Core Mission:** Your primary goal is to build and refine the user interface (the dashboard itself) that presents trading signals and market information clearly, accurately, and effectively. You'll be making the data actionable for the user.
+*   **Focus on the UI Layer:** You'll primarily work with React components (like those in `src/components/`) and the `UIAdapter` (see [`src/lib/agents/UIAdapter.ts`](src/lib/agents/UIAdapter.ts:1)) which helps manage the data displayed on the dashboard.
+*   **Understanding Data Flow:** While a general understanding of the "Agent-Based Architecture" (see section below) is beneficial, you can often treat the data-producing agents ([`DataCollector`](src/lib/agents/DataCollector.ts:1), [`IndicatorEngine`](src/lib/agents/IndicatorEngine.ts:1), [`SignalGenerator`](src/lib/agents/SignalGenerator.ts:1)) as sources of information. Focus on the *structure of the data* they provide to the [`Orchestrator`](src/lib/agents/Orchestrator.ts:1) and then to the `UIAdapter` (e.g., the `TradingSignal` and `IndicatorDataSet` types defined in [`src/lib/agents/types.ts`](src/lib/agents/types.ts:1)).
+*   **Key Task Areas:** Pay special attention to tasks in **Phase 3: 🧠 Signal Generation & Core UI Display** and **Phase 4: ⚡ Actionability & Optimization**, as these are heavily UI-centric. Also, review UI-related items in the "Known Issues to Address" section.
+*   **User-Centric Design:** Always think about the end-user. How can the dashboard quickly provide the "💡 Core Information for a Profitable 5-Min Trade Decision" (see section below)?
+*   **Code Craftsmanship (IMPORTANT for AI):** Strive for **concise, lean code**. Prioritize solutions that are **low in compute and token usage**. This means avoiding unnecessary complexity, optimizing loops and data structures, and being mindful of the overall efficiency of your implementations. Every line of code should serve a clear purpose.
+
 ---
 
 ## ✅ Completion Status - Updated 2025-06-16
@@ -78,6 +87,8 @@ The final dashboard *must* clearly and quickly provide:
     *   Calculated Stop-Loss (SL).
     *   Calculated Take-Profit (TP) (aiming for >2:1 Risk/Reward).
 6.  **Data Freshness:** Is the data live and trustworthy?
+
+*   **Dashboard Developer Focus:** Your primary objective is to ensure the dashboard UI effectively presents all of these 6 points to the user in an intuitive and timely manner.
 
 ---
 ## 🤖 Agent-Based Architecture (Simplified)
