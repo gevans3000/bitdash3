@@ -13,7 +13,7 @@ const BUFFER_MAX = 200;
 export class DataCollectorAgent {
   private candleBuffer: Candle[] = [];
   private lastCandleTime: number = 0;
-  private unsubscribeWebSocket: (() => void) | null = null;
+  private unsubscribeWS: (() => void) | null = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
 
@@ -28,14 +28,12 @@ export class DataCollectorAgent {
     // Start initialization but don't wait for it
     if (!this.initializationPromise) {
       this.initializationPromise = this.initialize();
-    }
-    
-    try {
-      this.initializationPromise; // Initialization is started, ensureInitialized will await
-    } catch (error) {
-      // Reset initialization promise on error to allow retries
-      this.initializationPromise = null;
-      throw error;
+      
+      // Log any initialization errors
+      this.initializationPromise.catch(error => {
+        console.error('DataCollector: Initialization failed:', error);
+        this.initializationPromise = null; // Allow retries
+      });
     }
   }
 
@@ -151,23 +149,20 @@ export class DataCollectorAgent {
     console.log('DataCollector: Setting up WebSocket connection...');
     
     try {
-      // Unsubscribe from any existing connection
-      if (this.unsubscribeWebSocket) {
-        this.unsubscribeWebSocket();
-        this.unsubscribeWebSocket = null;
+      // Unsubscribe from previous connection if exists
+      if (this.unsubscribeWS) {
+        console.log('DataCollector: Unsubscribing from previous WebSocket connection');
+        this.unsubscribeWS();
       }
-
-      // Subscribe to candle updates
-      const unsubscribe = subscribeToCandleUpdates((candle: Candle, isClosed: boolean) => {
-        this.handleNewCandle(candle, isClosed);
-      });
-
-      // Store unsubscribe function
-      this.unsubscribeWebSocket = () => {
-        console.log('DataCollector: Unsubscribing from WebSocket');
-        unsubscribe();
-      };
-
+      
+      // Subscribe to WebSocket updates
+      console.log('DataCollector: Subscribing to WebSocket updates');
+      this.unsubscribeWS = subscribeToCandleUpdates(
+        (candle: Candle, isClosed: boolean) => this.handleNewCandle(candle, isClosed)
+      );
+      
+      console.log('DataCollector: WebSocket subscription active');
+      
       // Notify that we're connected
       orchestrator.send({
         from: 'DataCollector',
@@ -180,8 +175,10 @@ export class DataCollectorAgent {
         timestamp: Date.now()
       });
     } catch (error) {
-      console.error('DataCollector: WebSocket setup failed:', error);
+      console.error('DataCollector: Error setting up WebSocket connection:', error);
       this.handleError(error, 'Failed to set up WebSocket connection');
+      
+      // The WebSocket client will handle reconnection automatically
       throw error;
     }
   }
@@ -256,56 +253,104 @@ export class DataCollectorAgent {
       });
     } catch (error) {
       console.error('DataCollector: Error notifying candle update:', error);
-      this.handleError(error, 'Failed to send candle update');
+      this.handleError(error, 'notifying candle update');
     }
   }
 
-  private handleError(error: unknown, context: string = ''): void {
+  private handleError(error: unknown, context: string): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`DataCollector: Error ${context}`, error);
+    console.error(`DataCollector: Error in ${context}:`, errorMessage);
     
-    try {
-      // Notify about the error
-      orchestrator.send({
-        from: 'DataCollector',
-        type: 'DATA_ERROR',
-        payload: {
-          message: errorMessage,
-          context,
-          timestamp: Date.now(),
-          stack: error instanceof Error ? error.stack : undefined
-        },
-        timestamp: Date.now()
-      });
-    } catch (sendError) {
-      console.error('DataCollector: Failed to send error notification:', sendError);
-    }
+    // Notify the orchestrator about the error
+    orchestrator.send({
+      from: 'DataCollector',
+      type: 'ERROR',
+      payload: {
+        message: `Error in ${context}`,
+        error: errorMessage,
+        timestamp: Date.now(),
+        context
+      },
+      timestamp: Date.now()
+    });
     
-    // Attempt to recover by reinitializing if we're in a bad state
-    if (this.isInitialized) {
-      console.log('DataCollector: Attempting to recover from error...');
-      this.isInitialized = false;
+    // If this was an initialization error, reset the promise to allow retries
+    if (context.includes('initialization')) {
+      console.log('DataCollector: Resetting initialization promise to allow retries');
       this.initializationPromise = null;
-      this.initialize().catch(err => {
         console.error('DataCollector: Recovery initialization failed:', err);
       });
     }
-  }
 
-  public cleanup() {
-    console.log('DataCollector: Cleaning up...');
+    orchestrator.send<{ lastUpdateTime: number; lastCandleTime: number }>({
+      from: 'DataCollector',
+      type: 'DATA_STATUS_UPDATE',
+      payload: { lastUpdateTime: Date.now(), lastCandleTime: candle.time },
+      timestamp: Date.now()
+    });
     
-    // Unsubscribe from WebSocket updates
-    if (this.unsubscribeWebSocket) {
-      try {
-        this.unsubscribeWebSocket();
-      } catch (error) {
-        console.error('Error during WebSocket cleanup:', error);
-      } finally {
-        this.unsubscribeWebSocket = null;
-      }
+  } catch (error) {
+    console.error('DataCollector: Error processing candle update:', error);
+    this.handleError(error, 'Failed to process candle update');
+  }
+} catch (error) {
+  console.error('DataCollector: Error in handleNewCandle:', error);
+  this.handleError(error, 'Failed to handle new candle');
+}
+}
+
+private notifyCandleUpdate(candle: Candle, isClosed: boolean): void {
+try {
+  const messageType = isClosed ? 'NEW_CLOSED_CANDLE_5M' : 'LIVE_CANDLE_UPDATE_5M';
+  orchestrator.send({
+    from: 'DataCollector',
+    type: messageType,
+    payload: { ...candle, isClosed },
+    timestamp: Date.now()
+  });
+} catch (error) {
+  console.error('DataCollector: Error notifying candle update:', error);
+  this.handleError(error, 'notifying candle update');
+}
+}
+
+private handleError(error: unknown, context: string): void {
+const errorMessage = error instanceof Error ? error.message : String(error);
+console.error(`DataCollector: Error in ${context}:`, errorMessage);
+  
+// Notify the orchestrator about the error
+orchestrator.send({
+  from: 'DataCollector',
+  type: 'ERROR',
+  payload: {
+    message: `Error in ${context}`,
+    error: errorMessage,
+    timestamp: Date.now(),
+    context
+  },
+  timestamp: Date.now()
+});
+  
+// If this was an initialization error, reset the promise to allow retries
+if (context.includes('initialization')) {
+  console.log('DataCollector: Resetting initialization promise to allow retries');
+  this.initializationPromise = null;
+      console.error('DataCollector: Recovery initialization failed:', err);
+  });
+}
+
+public cleanup(): void {
+  console.log('DataCollector: Cleaning up...');
+  
+  try {
+    if (this.unsubscribeWS) {
+      this.unsubscribeWS();
+      this.unsubscribeWS = null;
     }
-    
+  } catch (error) {
+    console.error('Error during WebSocket cleanup:', error);
+  } finally {
+    this.unsubscribeWS = null;
     // Clear any pending operations
     this.isInitialized = false;
     this.initializationPromise = null;

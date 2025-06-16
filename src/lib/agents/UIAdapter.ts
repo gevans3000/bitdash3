@@ -18,7 +18,7 @@ class UIAdapterService {
   constructor() {
     console.log('UIAdapterService: Initializing and subscribing to orchestrator messages.');
 
-    orchestrator.register('NEW_SIGNAL_5M', (msg: AgentMessage<TradingSignal>) => {
+    orchestrator.register('NEW_SIGNAL_5M', ((msg: AgentMessage<TradingSignal>) => {
       const signal = msg.payload;
       this.updateState(s => ({ ...s, latestSignal: signal }));
       if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -36,36 +36,37 @@ class UIAdapterService {
           }
         }
       }
-    } as MessageHandler);
+    }) as MessageHandler);
 
-    orchestrator.register('INITIAL_CANDLES_5M', (msg: AgentMessage<Candle[]>) =>
-      this.updateState(s => ({ ...s, candlesForChart: msg.payload.slice(-200) })) as MessageHandler
-    );
+    orchestrator.register('INITIAL_CANDLES_5M', ((msg: AgentMessage<Candle[]>) =>
+      this.updateState(s => ({ ...s, candlesForChart: msg.payload.slice(-200) }))
+    ) as MessageHandler);
 
-    orchestrator.register('LIVE_CANDLE_UPDATE_5M', (msg: AgentMessage<Candle & {isClosed: boolean}>) => {
+    orchestrator.register('LIVE_CANDLE_UPDATE_5M', ((msg: AgentMessage<Candle & {isClosed: boolean}>) => {
       const candle = msg.payload;
       this.updateState(s => {
         const newCandles = [...s.candlesForChart];
         const idx = newCandles.findIndex(c => c.time === candle.time);
         if (idx !== -1) newCandles[idx] = candle;
         else newCandles.push(candle);
-        return { ...s, candlesForChart: newCandles.sort((a,b)=>a.time-b.time).slice(-200) };
+        return { ...s, candlesForChart: newCandles.sort((a,b) => a.time - b.time).slice(-200) };
       });
-    } as MessageHandler);
+      return undefined; // Explicit return to match MessageHandler type
+    }) as MessageHandler);
 
-    orchestrator.register('INDICATORS_READY_5M', (msg: AgentMessage<IndicatorDataSet>) =>
-      this.updateState(s => ({ ...s, latestIndicators: msg.payload })) as MessageHandler
-    );
+    orchestrator.register('INDICATORS_READY_5M', ((msg: AgentMessage<IndicatorDataSet>) =>
+      this.updateState(s => ({ ...s, latestIndicators: msg.payload }))
+    ) as MessageHandler);
 
-    orchestrator.register('DATA_STATUS_UPDATE', (msg: AgentMessage<{lastUpdateTime: number}>) => {
+    orchestrator.register('DATA_STATUS_UPDATE', ((msg: AgentMessage<{lastUpdateTime: number}>) => {
       this.updateState(s => ({
         ...s,
         dataStatus: { ...s.dataStatus, text: '● Live', color: 'green', lastUpdateTime: msg.payload.lastUpdateTime },
         dataError: null,
       }));
-    } as MessageHandler);
+    }) as MessageHandler);
 
-    orchestrator.register('DATA_ERROR', (msg: AgentMessage<string | {message: string}>) => {
+    orchestrator.register('DATA_ERROR', ((msg: AgentMessage<string | {message: string}>) => {
       const errorPayload = msg.payload;
       const message = typeof errorPayload === 'string' ? errorPayload : errorPayload?.message;
       this.updateState(s => ({
@@ -73,7 +74,7 @@ class UIAdapterService {
         dataError: message || 'Unknown error',
         dataStatus: { ...s.dataStatus, text: `Error: ${message ? message.substring(0,30) : 'Unknown'}`, color: 'red' },
       }));
-    } as MessageHandler);
+    }) as MessageHandler);
   }
 
   private updateState(updater: (prevState: AppState) => AppState | Partial<AppState>) {

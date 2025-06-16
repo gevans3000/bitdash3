@@ -1,102 +1,101 @@
-import { Candle, CandleWebSocketData } from './types';
+import { Candle } from './types';
 
 type CandleCallback = (candle: Candle, isClosed: boolean) => void;
 
 class BinanceWebSocket {
   private socket: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second delay
-  private candleCallbacks: CandleCallback[] = [];
-  private isConnected = false;
+  private callbacks: CandleCallback[] = [];
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private readonly symbol = 'btcusdt';
+  private readonly interval = '5m';
 
   constructor() {
     this.connect();
   }
 
-  private getWebSocketUrl(symbol: string, interval: string): string {
-    const stream = `${symbol.toLowerCase()}@kline_${interval}`;
-    return `wss://stream.binance.com:9443/ws/${stream}`;
+  private get url(): string {
+    return `wss://stream.binance.com:9443/ws/${this.symbol}@kline_${this.interval}`;
   }
 
   private connect(): void {
-    if (this.isConnected) return;
-    
-    const symbol = 'btcusdt';
-    const interval = '5m';
-    
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     try {
-      this.socket = new WebSocket(this.getWebSocketUrl(symbol, interval));
-      this.setupEventHandlers();
+      this.socket = new WebSocket(this.url);
+      
+      this.socket.onopen = () => {
+        console.log('Connected to Binance WebSocket');
+      };
+
+      this.socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.k) {
+            const candle: Candle = {
+              time: data.k.t,
+              open: parseFloat(data.k.o),
+              high: parseFloat(data.k.h),
+              low: parseFloat(data.k.l),
+              close: parseFloat(data.k.c),
+              volume: parseFloat(data.k.v),
+              isClosed: data.k.x
+            };
+            this.callbacks.forEach(cb => cb(candle, candle.isClosed));
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      };
+
+      this.socket.onclose = () => {
+        console.log('WebSocket connection closed');
+        this.scheduleReconnect();
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        this.socket?.close();
+      };
+
     } catch (error) {
       console.error('WebSocket connection error:', error);
-      this.handleReconnect();
+      this.scheduleReconnect();
     }
   }
 
-  private setupEventHandlers(): void {
-    if (!this.socket) return;
-
-    this.socket.onopen = () => {
-      console.log('WebSocket connected');
-      this.isConnected = true;
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000; // Reset delay on successful connection
-      this.notifyConnectionStatus(true, 'Successfully connected to Binance WebSocket');
-    };
-
-    this.socket.onmessage = (event) => {
-      try {
-        const data: CandleWebSocketData = JSON.parse(event.data);
-        if (data.k) {
-          const candle: Candle = {
-            time: data.k.t,
-            open: parseFloat(data.k.o),
-            high: parseFloat(data.k.h),
-            low: parseFloat(data.k.l),
-            close: parseFloat(data.k.c),
-            volume: parseFloat(data.k.v)
-          };
-          this.notifyCallbacks(candle, data.k.x);
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    };
-
-    this.socket.onclose = () => {
-      console.log('WebSocket disconnected');
-      this.isConnected = false;
-      this.handleReconnect();
-    };
-
-    this.socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      this.isConnected = false;
-    };
-  }
-
-  private handleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
-      this.notifyConnectionStatus(false);
-      return;
-    }
-
-    this.reconnectAttempts++;
-    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms...`);
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) return;
     
-    // Notify about reconnection attempt
-    this.notifyConnectionStatus(false, `Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-    
-    setTimeout(() => {
-      console.log('Attempting to establish new WebSocket connection...');
+    console.log('Scheduling reconnection in 3 seconds...');
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       this.connect();
-      // Exponential backoff with max delay of 30 seconds
-      this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
-    }, this.reconnectDelay);
+    }, 3000);
   }
-  
+
+  public subscribe(callback: CandleCallback): () => void {
+    this.callbacks.push(callback);
+    return () => {
+      this.callbacks = this.callbacks.filter(cb => cb !== callback);
+    };
+  }
+
+  public close(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    if (this.socket) {
+      this.socket.onclose = null;
+      this.socket.close();
+      this.socket = null;
+    }
+  }
+
   private notifyConnectionStatus(connected: boolean, message?: string): void {
     // This would be used to notify the UI about connection status changes
     console.log(`WebSocket ${connected ? 'connected' : 'disconnected'}: ${message || ''}`);
@@ -122,10 +121,8 @@ class BinanceWebSocket {
     });
   }
 
-  public subscribe(callback: CandleCallback): () => void {
+  public subscribeToCandleUpdates(callback: CandleCallback): () => void {
     this.candleCallbacks.push(callback);
-    
-    // Return unsubscribe function
     return () => {
       this.candleCallbacks = this.candleCallbacks.filter(cb => cb !== callback);
     };
@@ -160,9 +157,9 @@ class BinanceWebSocket {
 }
 
 // Export a singleton instance
-export const binanceWebSocket = new BinanceWebSocket();
+const binanceWebSocket = new BinanceWebSocket();
 
-// Helper function to subscribe to candle updates
-export function subscribeToCandleUpdates(callback: CandleCallback): () => void {
-  return binanceWebSocket.subscribe(callback);
-}
+// Export the public API
+export const subscribeToCandleUpdates = binanceWebSocket.subscribe.bind(binanceWebSocket);
+
+export default binanceWebSocket;

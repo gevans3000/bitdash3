@@ -11,15 +11,8 @@ export async function getBinanceCandles(timeFrame: TimeFrame = '5m', limit = 100
     const res = await fetch(url);
     const responseTime = Date.now() - startTime;
     
-    // Log rate limit headers in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('Binance API Response Headers:');
-      for (const [name, value] of res.headers.entries()) {
-        if (name.toLowerCase().startsWith('x-mbx-used-weight-') || 
-            name.toLowerCase().startsWith('x-mbx-order-count-')) {
-          console.log(`  ${name}: ${value}`);
-        }
-      }
+      console.log(`Fetched ${limit} ${timeFrame} candles in ${responseTime}ms`);
     }
 
     // Handle error cases
