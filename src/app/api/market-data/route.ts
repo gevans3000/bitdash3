@@ -319,8 +319,9 @@ export async function GET(request: Request) {
     
     try {
       // Fetch candles data with appropriate cache time
+      const baseUrl = new URL(request.url).origin; // Get the base URL (e.g., http://localhost:3000)
       const candlesRes = await fetch(
-        `/api/binance-proxy/klines?symbol=${symbol}&interval=${interval}&limit=100`,
+        `${baseUrl}/api/binance-proxy/klines?symbol=${symbol}&interval=${interval}&limit=100`,
         { next: { revalidate: interval === '1m' ? 30 : 60 } }
       );
       

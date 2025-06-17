@@ -18,18 +18,66 @@ export interface Signal {
  * Generate trading signals based on multiple technical indicators and conditions
  */
 export function generateSignals(candles: Candle[]): Signal[] {
-  if (candles.length < 50) {
-    return []; // Not enough data
-  }
-  
-  // Check all conditions
-  const conditions = checkAllConditions(candles);
-  
-  // Return signals for different timeframes
+  // Log current environment and candle status for debugging
+  console.log(
+    `[generateSignals] NODE_ENV: ${process.env.NODE_ENV}, Candles length: ${candles?.length}`
+  );
+
+  // UNCONDITIONALLY RETURN FAKE SIGNALS FOR TESTING PURPOSES
+  // This helps isolate if the issue is with signal generation logic or UI/hook updates.
   return [
-    generateShortTermSignal(conditions, candles),
-    generateMediumTermSignal(conditions, candles),
-  ].filter(signal => signal.confidence > 0);
+    {
+      direction: 'buy',
+      strength: 'very_strong',
+      confidence: 95, // High confidence for visibility
+      timestamp: Date.now(),
+      timeframe: 'short_term',
+      reasons: ['FORCED (DEV TEST): Fake BUY signal'],
+    },
+    {
+      direction: 'sell',
+      strength: 'strong',
+      confidence: 85, // High confidence for visibility
+      timestamp: Date.now(),
+      timeframe: 'medium_term',
+      reasons: ['FORCED (DEV TEST): Fake SELL signal'],
+    },
+  ];
+
+  /* Original logic temporarily commented out for testing:
+  let signalsToReturn: Signal[] = [];
+
+  if (candles.length >= 50) {
+    const conditions = checkAllConditions(candles);
+    signalsToReturn = [
+      generateShortTermSignal(conditions, candles),
+      generateMediumTermSignal(conditions, candles),
+    ].filter(signal => signal.confidence > 0);
+  }
+
+  if (process.env.NODE_ENV === 'development' && signalsToReturn.length === 0) {
+    return [
+      {
+        direction: 'buy',
+        strength: 'very_strong',
+        confidence: 90,
+        timestamp: Date.now(),
+        timeframe: 'short_term',
+        reasons: ['DEV MODE: Fake BUY signal (no real signals or insufficient data)'],
+      },
+      {
+        direction: 'sell',
+        strength: 'strong',
+        confidence: 70,
+        timestamp: Date.now(),
+        timeframe: 'medium_term',
+        reasons: ['DEV MODE: Fake SELL signal (no real signals or insufficient data)'],
+      },
+    ];
+  }
+
+  return signalsToReturn;
+  */
 }
 
 /**

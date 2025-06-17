@@ -238,9 +238,12 @@ export function useMarketData({
 
   // Initialize WebSocket and event handlers
   useEffect(() => {
+    console.log(`useMarketData: Main useEffect running. mockModeRef.current is: ${mockModeRef.current}`); // DEBUG LOG
     if (mockModeRef.current) {
+      console.log('useMarketData: Main useEffect detected mockMode, calling startMockMode().'); // DEBUG LOG
       startMockMode();
     } else {
+      console.log('useMarketData: Main useEffect detected live mode, initializing WebSocket and fetching initial data.'); // DEBUG LOG
       // Initialize WebSocket
       wsRef.current = new BinanceWebSocket(symbol, interval);
       const ws = wsRef.current;
